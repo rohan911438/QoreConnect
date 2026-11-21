@@ -2,7 +2,13 @@
   "name": "@qoreconnect/web",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "next dev -p 3000", "build": "next build", "start": "next start", "typecheck": "tsc --noEmit" },
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test"
+  },
   "dependencies": {
     "@qoreconnect/core": "workspace:*",
     "@qoreconnect/react": "workspace:*",
@@ -10,5 +16,13 @@
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
-  "devDependencies": { "@tailwindcss/postcss": "^4.3.5", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "tailwindcss": "^4.3.5", "typescript": "5.9.3" }
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "5.9.3",
+    "viem": "2.58.2"
+  }
 }

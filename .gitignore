@@ -45,3 +45,7 @@ contracts/lib/
 apps/relayer/data/
 *.db-wal
 *.db-shm
+
+# playwright
+apps/web/test-results/
+apps/web/playwright-report/

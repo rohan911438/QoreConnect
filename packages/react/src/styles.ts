@@ -3,9 +3,9 @@ export const STYLES = `
 .qc-root{--qc-bg:#ffffff;--qc-fg:#0b0f14;--qc-muted:#5b6672;--qc-line:#e3e7ec;--qc-accent:#0f7a5c;--qc-accent-fg:#ffffff;
 --qc-ok:#0f7a5c;--qc-ok-bg:#e3f5ee;--qc-warn:#8a5a00;--qc-warn-bg:#fff3d6;--qc-bad:#b42318;--qc-bad-bg:#fde7e5;--qc-backdrop:rgba(11,15,20,.55);
 font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--qc-fg)}
-@media (prefers-color-scheme:dark){.qc-root:not([data-theme="light"]){--qc-bg:#0f141b;--qc-fg:#e8edf2;--qc-muted:#93a1b0;--qc-line:#1f2a36;
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .qc-root{--qc-bg:#0f141b;--qc-fg:#e8edf2;--qc-muted:#93a1b0;--qc-line:#1f2a36;
 --qc-accent:#7cf2c4;--qc-accent-fg:#06281d;--qc-ok:#7cf2c4;--qc-ok-bg:#0f2e24;--qc-warn:#ffcc66;--qc-warn-bg:#33270b;--qc-bad:#ff8a80;--qc-bad-bg:#3a1513;--qc-backdrop:rgba(0,0,0,.7)}}
-.qc-root[data-theme="dark"]{--qc-bg:#0f141b;--qc-fg:#e8edf2;--qc-muted:#93a1b0;--qc-line:#1f2a36;--qc-accent:#7cf2c4;--qc-accent-fg:#06281d;
+:root[data-theme="dark"] .qc-root{--qc-bg:#0f141b;--qc-fg:#e8edf2;--qc-muted:#93a1b0;--qc-line:#1f2a36;--qc-accent:#7cf2c4;--qc-accent-fg:#06281d;
 --qc-ok:#7cf2c4;--qc-ok-bg:#0f2e24;--qc-warn:#ffcc66;--qc-warn-bg:#33270b;--qc-bad:#ff8a80;--qc-bad-bg:#3a1513;--qc-backdrop:rgba(0,0,0,.7)}
 .qc-backdrop{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--qc-backdrop)}
 .qc-dialog{box-sizing:border-box;width:100%;max-width:460px;max-height:calc(100vh - 32px);overflow:auto;background:var(--qc-bg);color:var(--qc-fg);
@@ -33,4 +33,21 @@ border:1px solid var(--qc-line);border-radius:16px;padding:20px;box-shadow:0 20p
 .qc-visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media (max-width:420px){.qc-rows>div{grid-template-columns:1fr}.qc-actions{flex-direction:column-reverse}.qc-btn{width:100%}}
 @media (prefers-reduced-motion:no-preference){.qc-dialog{animation:qc-in .14s ease-out}}@keyframes qc-in{from{transform:translateY(6px);opacity:0}}
+`
+
+/** Additional styles for onboarding, approval and unlock. */
+export const EXTRA_STYLES = `
+.qc-list{margin:16px 0;padding-left:18px;display:grid;gap:8px}
+.qc-field{display:grid;gap:6px;margin:12px 0}.qc-field input{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--qc-line);background:transparent;color:var(--qc-fg)}
+.qc-field input:focus-visible{outline:3px solid var(--qc-accent);outline-offset:1px}
+.qc-steps{list-style:none;margin:16px 0;padding:0;display:grid;gap:12px}
+.qc-step{display:flex;gap:10px;align-items:flex-start}.qc-block{display:block;font-size:13px}
+.qc-dot{flex:none;width:20px;height:20px;border-radius:999px;border:2px solid var(--qc-line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-top:1px}
+.qc-step-active .qc-dot{border-color:var(--qc-accent);border-top-color:transparent}
+@media (prefers-reduced-motion:no-preference){.qc-step-active .qc-dot{animation:qc-spin .9s linear infinite}}@keyframes qc-spin{to{transform:rotate(360deg)}}
+.qc-step-done .qc-dot{background:var(--qc-ok);border-color:var(--qc-ok);color:var(--qc-bg)}
+.qc-step-pending{opacity:.65}
+.qc-timer{margin:8px 0 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}
+.qc-error{margin:12px 0 0;padding:10px 12px;border-radius:10px;color:var(--qc-bad);background:var(--qc-bad-bg)}
+.qc-btn:disabled{opacity:.55;cursor:not-allowed}
 `

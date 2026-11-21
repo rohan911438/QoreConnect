@@ -52,6 +52,7 @@ const sponsor = new SponsorService(
     ...DEFAULT_SPONSOR,
     amountUqor: BigInt(process.env.SPONSOR_AMOUNT_UQOR ?? DEFAULT_SPONSOR.amountUqor),
     globalDailyBudgetUqor: BigInt(process.env.SPONSOR_DAILY_BUDGET_UQOR ?? DEFAULT_SPONSOR.globalDailyBudgetUqor),
+    perIpPerDay: Number(process.env.SPONSOR_PER_IP_PER_DAY ?? DEFAULT_SPONSOR.perIpPerDay),
   },
   async (root) => (await client.getPqcKey(root)).registered,
 )

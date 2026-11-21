@@ -39,8 +39,11 @@ export interface QoreConnectHooks {
    * (UI in P09). Default: headless onboarding with `protection` (create vault → sponsor → register → link).
    */
   onNeedsOnboarding?: (ctx: { metamaskAddress: string; provider: QoreConnectProvider }) => Promise<RootSigner>
-  /** The target is not in the allow-list. Resolve to approve (root-signed) or reject. Default: headless approve. */
-  onNeedsApproval?: (ctx: { contract: string; unlock: () => Promise<RootSigner> }) => Promise<boolean>
+  /**
+   * The target is not in the allow-list. Resolve true to approve `contracts` (the provider then unlocks the root and
+   * signs one rules update; limits are unchanged) or false to reject. Default: approve.
+   */
+  onNeedsApproval?: (ctx: { contract: string; contracts: string[]; appName: string; origin?: string; net: QoreNetwork; unlock: () => Promise<RootSigner> }) => Promise<boolean>
   /** Show the signing preview; resolve false to cancel (maps to 4001). Default: allow. */
   onPreview?: (req: PreviewRequest) => Promise<boolean>
   /** Called before forwarding personal_sign / signTypedData to MetaMask: these are classical signatures. */
@@ -227,6 +230,11 @@ export class QoreConnectProvider implements Eip1193Provider {
     return this.metamask
   }
 
+  /** The upstream MetaMask provider (discovered on first use). */
+  upstream(): Promise<Eip1193Provider> {
+    return this.requireMetaMask()
+  }
+
   private async unlock(): Promise<RootSigner> {
     if (this.opts.hooks?.unlockRoot) return this.opts.hooks.unlockRoot()
     throw new QoreConnectError('VAULT_LOCKED', { message: 'Unlocking needs the QoreConnect UI (or a hooks.unlockRoot implementation).' })
@@ -321,13 +329,16 @@ export class QoreConnectProvider implements Eip1193Provider {
     const selector = data.length >= 10 ? data.slice(0, 10).toLowerCase() : undefined
     const ok = state.approved.some((c) => c === target || (selector && c === `${target}/${selector}`))
     if (ok) return
+    // Approve the target plus this dApp's other configured contracts that are not approved yet, in one rules update.
+    const configured = this.opts.contracts.map((c) => normaliseCall(c))
+    const missing = [...new Set([normaliseCall(target), ...configured.filter((c) => !state.approved.includes(c))])]
     const hook = this.opts.hooks?.onNeedsApproval
-    const approve = hook ? await hook({ contract: target, unlock: () => this.unlock() }) : true
+    const approve = hook
+      ? await hook({ contract: target, contracts: missing, appName: this.opts.appName, origin: (globalThis as any).location?.origin, net: this.net, unlock: () => this.unlock() })
+      : true
     if (!approve) throw new QoreConnectError('NOT_APPROVED')
-    if (!hook) {
-      const root = await this.unlock()
-      await approveDapp({ net: this.net, root, fetch: this.opts.fetch, contracts: [normaliseCall(target)] })
-    }
+    const root = await this.unlock()
+    await approveDapp({ net: this.net, root, fetch: this.opts.fetch, contracts: missing })
   }
 
   async sendTransaction(tx: TxRequest): Promise<string> {

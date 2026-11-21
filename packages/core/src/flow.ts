@@ -8,9 +8,9 @@ import type { Protection, RootVault } from './vault/vault'
 
 export type FlowEvent =
   | { step: 'creating' }
-  | { step: 'created'; qorAddress: string; evmAddress: string }
+  | { step: 'created'; qorAddress: string; evmAddress: string; root?: RootSigner }
   | { step: 'signing' }
-  | { step: 'signed' }
+  | { step: 'signed'; proof?: LinkProof }
   | OnboardEvent
   | { step: 'linking' }
   | { step: 'linked'; txHash?: string; alreadyLinked: boolean }
@@ -57,13 +57,13 @@ export async function onboardAndLink(o: OnboardAndLinkOptions): Promise<OnboardA
     emit({ step: 'creating' })
     root = await o.vault.create(o.protection)
   }
-  emit({ step: 'created', qorAddress: root.qorAddress, evmAddress: root.evmAddress })
+  emit({ step: 'created', qorAddress: root.qorAddress, evmAddress: root.evmAddress, root })
 
   let proof = o.linkProof
   if (!proof) {
     emit({ step: 'signing' })
     proof = await signLinkProof(o.net, root.qorAddress, o.metamask, o.metamaskAddress)
-    emit({ step: 'signed' })
+    emit({ step: 'signed', proof })
   }
 
   const ob = await onboardRoot({
