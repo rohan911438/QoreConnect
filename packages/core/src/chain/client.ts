@@ -36,6 +36,7 @@ export interface SpendingRuleInfo {
   dailyLimit: bigint
   allowedDenoms: string[]
   allowedEvmCalls: string[]
+  denomLimits: { denom: string; perTxLimit: string; dailyLimit: string }[]
 }
 
 const isNotFound = (e: unknown) =>
@@ -116,6 +117,7 @@ export class QoreClient {
         dailyLimit: BigInt(x.dailyLimit),
         allowedDenoms: x.allowedDenoms,
         allowedEvmCalls: x.allowedEvmCalls,
+        denomLimits: x.denomLimits ?? [],
       }))
     } catch (e) {
       if (isNotFound(e)) return []
