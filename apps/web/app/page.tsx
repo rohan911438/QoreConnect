@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { connection } from 'next/server'
 import { ConnectButton } from '../components/ConnectButton'
 
 const ROWS: [string, string, string][] = [
@@ -20,7 +21,9 @@ const FEATURES: { title: string; body: string; status: 'Shipped' | 'In progress'
 
 const TONE = { Shipped: 'bg-ok-bg text-ok', 'In progress': 'bg-warn-bg text-warn', Planned: 'bg-line text-muted' }
 
-export default function Home() {
+/** The landing page onboards (creates the root vault), so it is rendered per request for the CSP nonce (T17). */
+export default async function Home() {
+  await connection()
   return (
     <div className="space-y-16 pt-8 sm:pt-16">
       <section className="max-w-3xl space-y-6">

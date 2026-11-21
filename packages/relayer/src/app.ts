@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { bodyLimit } from 'hono/body-limit'
 import { QoreClient, type QoreNetwork } from '@qoreconnect/core'
 import type { RelayerStore } from './store'
 import type { SponsorService } from './sponsor'
@@ -22,7 +23,11 @@ export interface RelayerDeps {
   corsOrigins?: string[]
   /** Migration Meter indexer (enables POST /v1/meter/refresh). */
   meter?: MeterIndexer
+  /** /health reports an alert when the relayer or sponsor balance is below this (default 2 QOR). */
+  lowBalanceUqor?: bigint
 }
+
+export const MAX_BODY_BYTES = 160 * 1024
 
 export function createRelayerApp(d: RelayerDeps) {
   const app = new Hono()
@@ -36,6 +41,11 @@ export function createRelayerApp(d: RelayerDeps) {
       allowHeaders: ['content-type', 'authorization'],
     }),
   )
+  // Input size limit: the largest valid request is a relay with 64 KiB calldata (~130 KB as hex JSON).
+  app.use(
+    '/v1/*',
+    bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => c.json({ error: `request body over ${MAX_BODY_BYTES} bytes` }, 413) }),
+  )
 
   app.get('/health', async (c) => {
     const [height, relayerBal, sponsorBal] = await Promise.all([
@@ -43,8 +53,17 @@ export function createRelayerApp(d: RelayerDeps) {
       d.accounts?.relayer ? client.getBalance(d.accounts.relayer).catch(() => null) : null,
       d.accounts?.sponsor ? client.getBalance(d.accounts.sponsor).catch(() => null) : null,
     ])
+    const low = d.lowBalanceUqor ?? 2_000_000n
+    const alerts = [
+      height === null && 'chain unreachable',
+      relayerBal !== null && relayerBal < low && `relayer balance low (${relayerBal} uqor < ${low})`,
+      sponsorBal !== null && sponsorBal < low && `sponsor balance low (${sponsorBal} uqor < ${low})`,
+    ].filter(Boolean) as string[]
+    // 200 while the process is alive (liveness); `status` and `alerts` are for monitoring.
     return c.json({
       ok: true,
+      status: alerts.length ? 'degraded' : 'healthy',
+      alerts,
       service: 'qoreconnect-relayer',
       version: d.version ?? '0.0.0',
       chainId: d.net.chainId,

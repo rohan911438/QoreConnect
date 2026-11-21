@@ -374,7 +374,11 @@ export class QoreConnectProvider implements Eip1193Provider {
     const res = await this.relayer.relayOrThrow(req)
     // Verify on chain by hash (do not trust the relayer's word alone).
     const onChain = await fetchTxResult(this.net, res.txHash, this.opts.fetch)
-    const [exec] = onChain ? decodeAuthenticatorExecutions(onChain as any) : []
+    // The hash must be OUR call (T9): a relayer could otherwise point at someone else's successful transaction.
+    const msgs: any[] = ((onChain as any)?.tx?.body?.messages ?? []).filter((m: any) => m['@type'] === '/qorechain.abstractaccount.v1.MsgExecuteEVM')
+    const idx = msgs.findIndex((m) => isSameCall(m, preview.call))
+    if (onChain && idx < 0) throw new QoreConnectError('TX_FAILED', { message: 'The relayer returned a transaction that is not the call you signed.', txHash: res.txHash })
+    const exec = onChain ? decodeAuthenticatorExecutions(onChain as any)[idx] : undefined
     if (!onChain || !exec?.success) throw new QoreConnectError('TX_FAILED', { message: 'The relayer reported success but the chain does not confirm it.', txHash: res.txHash })
     return '0x' + res.txHash.toLowerCase()
   }
@@ -404,3 +408,19 @@ export class QoreConnectProvider implements Eip1193Provider {
 }
 
 const lower = <T>(m?: Record<string, T>) => (m ? Object.fromEntries(Object.entries(m).map(([k, v]) => [k.toLowerCase(), v])) : undefined)
+
+const b64Hex = (s: string | undefined) => '0x' + Array.from(atob(s ?? ''), (c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
+
+/** Does an on-chain MsgExecuteEVM (REST JSON) carry exactly the call that was previewed and signed? */
+export function isSameCall(m: any, call: { account: string; to: string; data: string; valueWei: bigint; nonce?: bigint; gasLimit?: number }): boolean {
+  if (!m) return false
+  const data = typeof m.data === 'string' && !m.data.startsWith('0x') ? b64Hex(m.data) : String(m.data ?? '0x')
+  return (
+    m.account === call.account &&
+    String(m.to).toLowerCase() === call.to.toLowerCase() &&
+    data.toLowerCase() === (call.data || '0x').toLowerCase() &&
+    BigInt(m.value || 0) === call.valueWei &&
+    (call.nonce === undefined || BigInt(m.nonce ?? -1) === call.nonce) &&
+    (call.gasLimit === undefined || Number(m.gas_limit ?? m.gasLimit) === call.gasLimit)
+  )
+}

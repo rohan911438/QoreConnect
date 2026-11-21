@@ -34,7 +34,7 @@ vi.mock('../src/chain/tx', async (orig) => ({
     gasUsed: 1000n,
     events: [],
     msgResponses: [{ typeUrl: '/qorechain.abstractaccount.v1.MsgExecuteEVMResponse', value: new Uint8Array([0x08, 0x01]) }],
-    tx: { body: { messages: [{ '@type': '/qorechain.abstractaccount.v1.MsgExecuteEVM', account: ROOT_QOR, to: COUNTER, value: '0', data: '', gas_limit: '200000' }] } },
+    tx: { body: { messages: [{ '@type': '/qorechain.abstractaccount.v1.MsgExecuteEVM', account: ROOT_QOR, to: COUNTER, value: '0', data: '0J3gig==', gas_limit: '120000', nonce: '3' }] } },
   })),
 }))
 
@@ -155,6 +155,29 @@ describe('QoreConnectProvider routing', () => {
     const { p } = await setup()
     const r = await p.request({ method: 'eth_getTransactionReceipt', params: ['0x' + HASH.toLowerCase()] })
     expect(r).toMatchObject({ status: '0x1', blockNumber: '0xa', from: ROOT_EVM, to: COUNTER, logs: [] })
+  })
+
+  it('invariant 4 / T9: never reports success unless the chain says success=true for THIS call', async () => {
+    const tx = await import('../src/chain/tx')
+    const good: any = await vi.mocked(tx.fetchTxResult).getMockImplementation()!({} as any, HASH)
+    const send = async () => {
+      const { p } = await setup()
+      await p.request({ method: 'eth_requestAccounts' })
+      return p.request({ method: 'eth_sendTransaction', params: [{ from: ROOT_EVM, to: COUNTER, data: '0xd09de08a' }] })
+    }
+    // Relayer says success, chain says the execution failed.
+    vi.mocked(tx.fetchTxResult).mockResolvedValueOnce({ ...good, msgResponses: [{ typeUrl: '/qorechain.abstractaccount.v1.MsgExecuteEVMResponse', value: new Uint8Array() }] })
+    await expect(send()).rejects.toThrow(/does not confirm/)
+    // Relayer returns the hash of someone else's successful call (different data / earlier nonce / unknown hash).
+    const other = (patch: object) => ({ ...good, tx: { body: { messages: [{ ...good.tx.body.messages[0], ...patch }] } } })
+    for (const patch of [{ data: 'AAAAAA==' }, { nonce: '2' }, { account: 'qor1zl9mfjhqksshzjpf7erp9nypadncfz3n42hct8' }, { value: '1' }]) {
+      vi.mocked(tx.fetchTxResult).mockResolvedValueOnce(other(patch))
+      await expect(send()).rejects.toThrow(/not the call you signed/)
+    }
+    vi.mocked(tx.fetchTxResult).mockResolvedValueOnce(undefined as any)
+    await expect(send()).rejects.toThrow(/does not confirm/)
+    // And the honest case still succeeds.
+    expect(await send()).toBe('0x' + HASH.toLowerCase())
   })
 
   it('passes other methods through to the EVM RPC', async () => {

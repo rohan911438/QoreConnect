@@ -10,14 +10,13 @@ export const metadata: Metadata = {
 }
 export const viewport: Viewport = { width: 'device-width', initialScale: 1 }
 
-/** Applies the saved theme before paint (no flash). */
-const themeScript = `try{var t=localStorage.getItem('qc-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}`
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* Saved theme before paint (no flash); a same-origin file, so the CSP needs no inline script. */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/theme.js" />
       </head>
       <body className="min-h-screen">
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-panel focus:px-3 focus:py-2">
