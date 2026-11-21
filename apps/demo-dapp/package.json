@@ -10,6 +10,7 @@
     "test:e2e": "vitest run"
   },
   "dependencies": {
+    "@qoreconnect/react": "workspace:*",
     "@qoreconnect/wagmi": "workspace:*",
     "@tanstack/react-query": "5.108.0",
     "react": "19.3.1",

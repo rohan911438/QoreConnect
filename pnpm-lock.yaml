@@ -44,6 +44,9 @@ importers:
 
   apps/demo-dapp:
     dependencies:
+      '@qoreconnect/react':
+        specifier: workspace:*
+        version: link:../../packages/react
       '@qoreconnect/wagmi':
         specifier: workspace:*
         version: link:../../packages/wagmi

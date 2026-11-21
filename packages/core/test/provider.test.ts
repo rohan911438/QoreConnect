@@ -12,6 +12,7 @@ vi.mock('../src/account/session', () => ({
     account: ROOT_QOR,
     keys: state.linked ? [{ pubkeyHex: MM.slice(2), active: true, isMetaMask: true }] : [],
     rules: [],
+    managed: { id: 'qoreconnect', enabled: true, perTxLimit: 1_000_000n, dailyLimit: 5_000_000n, allowedEvmCalls: state.approved.length ? state.approved : ['0x000000000000000000000000000000000000dead'] },
     approved: state.approved,
   })),
   approveDapp: vi.fn(async () => ({})),
@@ -21,6 +22,7 @@ vi.mock('../src/relay', () => ({
   signRelayRequest: vi.fn(async (o: any) => ({ account: o.account, to: o.to, data: o.data, gasLimit: String(o.gasLimit), tankId: o.tankId })),
   RelayerClient: class {
     relayOrThrow = vi.fn(async () => ({ ok: true, success: true, txHash: HASH }))
+    spentToday = vi.fn(async () => 0n)
   },
 }))
 vi.mock('../src/chain/tx', async (orig) => ({
@@ -54,9 +56,10 @@ function metamask() {
 }
 
 /** EVM RPC mock: estimateGas, receipts (null for relayed hashes), blocks. */
-const rpcFetch = vi.fn(async (_url: string, init?: RequestInit) => {
+const rpcFetch = vi.fn(async (url: string, init?: RequestInit) => {
+  if (!init?.body) return new Response(JSON.stringify(/nonce/.test(url) ? { nonce: '3' } : {}), { status: /nonce/.test(url) ? 200 : 404 })
   const { method, id } = JSON.parse(String(init?.body))
-  const result = method === 'eth_estimateGas' ? '0x186a0' : method === 'eth_blockNumber' ? '0xa' : method === 'eth_getBlockByNumber' ? { hash: '0x' + '11'.repeat(32) } : null
+  const result = method === 'eth_call' ? '0x' : method === 'eth_estimateGas' ? '0x186a0' : method === 'eth_blockNumber' ? '0xa' : method === 'eth_getBlockByNumber' ? { hash: '0x' + '11'.repeat(32) } : null
   return new Response(JSON.stringify({ jsonrpc: '2.0', id, result }))
 })
 
@@ -114,7 +117,8 @@ describe('QoreConnectProvider routing', () => {
     const hash = await p.request({ method: 'eth_sendTransaction', params: [{ from: ROOT_EVM, to: COUNTER, data: '0xd09de08a' }] })
     expect(hash).toBe('0x' + HASH.toLowerCase())
     const sign = vi.mocked(relay.signRelayRequest).mock.calls[0]![0] as any
-    expect(sign).toMatchObject({ account: ROOT_QOR, to: COUNTER, gasLimit: Math.ceil(100_000 * 1.2), tankId: 'demo-dapp', metamaskAddress: MM })
+    expect(sign).toMatchObject({ tankId: 'demo-dapp', call: { account: ROOT_QOR, to: COUNTER, gasLimit: Math.ceil(100_000 * 1.2), pubkey: MM, data: '0xd09de08a', valueWei: 0n } })
+    expect(Object.isFrozen(sign.call)).toBe(true)
   })
 
   it('preview hook can cancel (maps to 4001)', async () => {

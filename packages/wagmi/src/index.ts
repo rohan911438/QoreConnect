@@ -30,7 +30,7 @@ export interface QoreConnectParameters {
   /** Announce QoreConnect to EIP-6963 wallet pickers such as RainbowKit (default true). */
   announce?: boolean
   /** Advanced: network, upstream MetaMask, vault, fetch. */
-  advanced?: Pick<QoreConnectProviderOptions, 'net' | 'metamask' | 'vault' | 'fetch'>
+  advanced?: Pick<QoreConnectProviderOptions, 'net' | 'metamask' | 'vault' | 'fetch' | 'abis' | 'fourByte'>
 }
 
 qoreConnect.type = 'qoreConnect' as const

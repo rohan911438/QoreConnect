@@ -12,6 +12,8 @@ import { approveDapp, getSessionState, linkSessionKey } from '../account/session
 import { onboardRoot } from '../onboard'
 import { normaliseCall } from '../account/rules'
 import { toRpcError } from './errors'
+import { buildPreview, type Preview } from '../preview/preview'
+import type { Abi } from 'viem'
 import { CHAIN_ID_HEX, evmRpc, getReceipt, getTransaction, type RpcFn } from './receipts'
 
 
@@ -23,11 +25,12 @@ export interface TxRequest {
   gas?: string
 }
 
-/** What the preview hook sees before MetaMask is asked to sign (P08 renders it). */
+/** What the preview hook sees before MetaMask is asked to sign. `preview.call` is exactly what gets signed. */
 export interface PreviewRequest {
-  tx: Required<Pick<TxRequest, 'to' | 'data'>> & { valueWei: bigint; gasLimit: number }
+  preview: Preview
   account: { qorAddress: string; evmAddress: string }
   metamaskAddress: string
+  appName: string
 }
 
 export interface QoreConnectHooks {
@@ -58,6 +61,10 @@ export interface QoreConnectProviderOptions {
   vault?: RootVault
   hooks?: QoreConnectHooks
   fetch?: FetchLike
+  /** ABIs for readable previews, by contract address. */
+  abis?: Record<string, { abi: Abi; name?: string }>
+  /** Look up unknown selectors on 4byte.directory (default true). */
+  fourByte?: boolean
 }
 
 type Listener = (...args: any[]) => void
@@ -344,29 +351,38 @@ export class QoreConnectProvider implements Eip1193Provider {
         gasLimit = DEFAULT_CALL_GAS_LIMIT
       }
     }
-    if (this.opts.hooks?.onPreview) {
-      const go = await this.opts.hooks.onPreview({ tx: { to, data, valueWei, gasLimit }, account: root, metamaskAddress: this.metamaskAddress! })
-      if (!go) throw new QoreConnectError('USER_REJECTED')
+    const preview = await this.preview({ to, data, valueWei, gasLimit })
+    // The user always sees the preview, including why a call is blocked; then predicted refusals never reach MetaMask (P08 G2).
+    const go = this.opts.hooks?.onPreview ? await this.opts.hooks.onPreview({ preview, account: root, metamaskAddress: this.metamaskAddress!, appName: this.opts.appName }) : true
+    if (preview.blocked) {
+      const failed = preview.checks.find((c) => !c.ok && !c.warning && c.id !== 'simulation')!
+      throw new QoreConnectError(failed.id === 'allow-list' ? 'NOT_APPROVED' : 'LIMIT_EXCEEDED', { message: `Blocked by chain: ${failed.detail}` })
     }
+    if (preview.willFail) throw new QoreConnectError('TX_FAILED', { message: `This call would revert: ${preview.simulation.revertReason}` })
+    if (!go) throw new QoreConnectError('USER_REJECTED')
     const mm = await this.requireMetaMask()
-    const req: RelayRequest = await signRelayRequest({
-      net: this.net,
-      ethereum: mm,
-      metamaskAddress: this.metamaskAddress!,
-      account: root.qorAddress,
-      to,
-      valueWei,
-      data,
-      gasLimit,
-      tankId: this.opts.gasTankId,
-      fetch: this.opts.fetch,
-    })
+    const req: RelayRequest = await signRelayRequest({ net: this.net, ethereum: mm, metamaskAddress: preview.call.pubkey, account: preview.call.account, to: preview.call.to, tankId: this.opts.gasTankId, fetch: this.opts.fetch, call: preview.call })
     const res = await this.relayer.relayOrThrow(req)
     // Verify on chain by hash (do not trust the relayer's word alone).
     const onChain = await fetchTxResult(this.net, res.txHash, this.opts.fetch)
     const [exec] = onChain ? decodeAuthenticatorExecutions(onChain as any) : []
     if (!onChain || !exec?.success) throw new QoreConnectError('TX_FAILED', { message: 'The relayer reported success but the chain does not confirm it.', txHash: res.txHash })
     return '0x' + res.txHash.toLowerCase()
+  }
+
+  /** Build the signing preview for a call from the connected account (no signature is requested). */
+  async preview(tx: { to: string; data: string; valueWei: bigint; gasLimit: number }): Promise<Preview> {
+    const root = this.root!
+    const [state, nonce, spentTodayUqor] = await Promise.all([
+      getSessionState({ net: this.net, fetch: this.opts.fetch }, root.qorAddress),
+      this.client.getAuthNonce(root.qorAddress, this.metamaskAddress!),
+      this.relayer.spentToday(root.qorAddress),
+    ])
+    const rule = state.managed ?? state.rules.find((r) => r.enabled)
+    return buildPreview(
+      { chainId: this.net.chainId, account: root.qorAddress, pubkey: this.metamaskAddress!, to: tx.to, valueWei: tx.valueWei, data: tx.data, gasLimit: tx.gasLimit, nonce },
+      { net: this.net, rootEvm: root.evmAddress, rule, approved: state.approved, spentTodayUqor, signer: 'metamask', abis: lower(this.opts.abis), rpc: this.rpcFn, fourByte: this.opts.fourByte, fetch: this.opts.fetch as any },
+    )
   }
 
   async receipt(hash: string) {
@@ -377,3 +393,5 @@ export class QoreConnectProvider implements Eip1193Provider {
     return getTransaction(this.net, hash, this.rpcFn, this.opts.fetch)
   }
 }
+
+const lower = <T>(m?: Record<string, T>) => (m ? Object.fromEntries(Object.entries(m).map(([k, v]) => [k.toLowerCase(), v])) : undefined)

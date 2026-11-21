@@ -163,7 +163,7 @@ export class RelayService {
     const success = !!result?.success
     const code = success ? undefined : classifyChainRefusal(result?.reason ?? (result as any)?.vmError, undefined)
     this.store.debitTank(r.tankId, fee)
-    this.store.recordRelay({ tankId: r.tankId, account: r.account, signer: r.pubkey.toLowerCase(), target: r.to.toLowerCase(), txHash: res.transactionHash, success, code: code ? CHAIN_CODES[code] : 0, error: success ? undefined : result?.reason, feeUqor: fee, ip })
+    this.store.recordRelay({ tankId: r.tankId, account: r.account, signer: r.pubkey.toLowerCase(), target: r.to.toLowerCase(), txHash: res.transactionHash, success, code: code ? CHAIN_CODES[code] : 0, error: success ? undefined : result?.reason, feeUqor: fee, valueUqor: weiToUqor(BigInt(r.value)), ip })
     if (success) this.store.recordMeterEvent('relayed', r.account, res.transactionHash)
     return {
       status: 200,

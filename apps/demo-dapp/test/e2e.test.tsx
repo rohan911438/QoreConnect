@@ -14,6 +14,7 @@ import { createPublicClient, http } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { DIANA, MemoryVaultStorage, QoreClient, RootVault } from '@qoreconnect/core'
 import { qoreConnect, qoreTransport, qorechainDiana } from '@qoreconnect/wagmi'
+import { QoreConnectProvider, createQoreConnectUI } from '@qoreconnect/react'
 import { ChainFundsSender, ChainRelay, DEFAULT_SPONSOR, RelayService, RelayerStore, SponsorService, createRelayerApp, operatorAccount } from '@qoreconnect/relayer'
 import { App } from '../src/App'
 import { COUNTER, counterAbi } from '../src/counter'
@@ -36,8 +37,10 @@ describe.skipIf(!MNEMONIC)('demo dApp E2E on Diana (headless MetaMask)', () => {
 
     // Stand-in MetaMask and a password-protected root on this "device".
     const mmAcct = privateKeyToAccount(generatePrivateKey())
+    let signatures = 0
     const metamask = {
       request: async ({ method, params }: any) => {
+        if (method === 'personal_sign') signatures++
         if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [mmAcct.address]
         if (method === 'personal_sign') return mmAcct.signMessage({ message: { raw: params[0] } })
         throw new Error('unsupported ' + method)
@@ -47,10 +50,11 @@ describe.skipIf(!MNEMONIC)('demo dApp E2E on Diana (headless MetaMask)', () => {
     const root = await vault.create({ kind: 'password', password: 'e2e test only', scrypt: { N: 2 ** 10, r: 8, p: 1 } })
 
     // The dApp config, with the headless test wiring under `advanced` and `ui`.
+    const ui = createQoreConnectUI({ unlockRoot: async () => root })
     const config = createConfig({
       chains: [qorechainDiana],
       connectors: [
-        qoreConnect({ appName: 'Quantum Tip Jar', contracts: [COUNTER], relayerUrl: RELAYER, gasTankId: 'demo-dapp', announce: false, ui: { unlockRoot: async () => root }, advanced: { metamask, vault, fetch: fetchImpl } }),
+        qoreConnect({ appName: 'Quantum Tip Jar', contracts: [COUNTER], relayerUrl: RELAYER, gasTankId: 'demo-dapp', announce: false, ui: ui.hooks, advanced: { metamask, vault, fetch: fetchImpl, abis: { [COUNTER]: { abi: counterAbi, name: 'Counter' } }, fourByte: false } }),
       ],
       transports: { [qorechainDiana.id]: qoreTransport({ fetch: fetchImpl }) },
     })
@@ -60,7 +64,9 @@ describe.skipIf(!MNEMONIC)('demo dApp E2E on Diana (headless MetaMask)', () => {
     render(
       <WagmiProvider config={config}>
         <QueryClientProvider client={new QueryClient()}>
-          <App />
+          <QoreConnectProvider ui={ui}>
+            <App />
+          </QoreConnectProvider>
         </QueryClientProvider>
       </WagmiProvider>,
     )
@@ -69,6 +75,13 @@ describe.skipIf(!MNEMONIC)('demo dApp E2E on Diana (headless MetaMask)', () => {
     await waitFor(() => expect(screen.getByTestId('account').textContent).toContain(root.evmAddress.slice(2, 10)), { timeout: 180_000, interval: 1_000 })
     const tConnected = Date.now()
     fireEvent.click(screen.getByText('Increment'))
+    // P08: the preview appears BEFORE MetaMask is asked to sign.
+    const signedBefore = signatures
+    await screen.findByRole('dialog', {}, { timeout: 30_000 })
+    expect(screen.getByTestId('qc-label').textContent).toBe('Classical, capped')
+    expect(screen.getByText('increment()')).toBeTruthy()
+    expect(signatures).toBe(signedBefore)
+    fireEvent.click(screen.getByText('Confirm in MetaMask'))
     await waitFor(
       () => {
         const err = screen.queryByTestId('error')
@@ -79,6 +92,28 @@ describe.skipIf(!MNEMONIC)('demo dApp E2E on Diana (headless MetaMask)', () => {
     )
     const after = await evm.readContract({ address: COUNTER, abi: counterAbi, functionName: 'count' })
     expect(after).toBeGreaterThanOrEqual(before + 1n)
-    console.log(JSON.stringify({ root: root.qorAddress, rootEvm: root.evmAddress, metamask: mmAcct.address, tx: screen.getByTestId('hash').textContent, connectMs: tConnected - t0, incrementMs: Date.now() - tConnected, before: String(before), after: String(after) }, null, 2))
+    // P08 G2 against the real chain rules: over-limit and not-allowed are predicted before any signature.
+    const provider: any = await config.connectors[0]!.getProvider()
+    const QOR = 10n ** 18n
+    const overLimit = await provider.preview({ to: COUNTER, data: '0xd09de08a', valueWei: 2n * QOR, gasLimit: 120_000 })
+    const notAllowed = await provider.preview({ to: '0x1111111111111111111111111111111111111111', data: '0x', valueWei: 0n, gasLimit: 120_000 })
+    expect(overLimit).toMatchObject({ blocked: true, label: 'Blocked by chain' })
+    expect(notAllowed).toMatchObject({ blocked: true, label: 'Blocked by chain' })
+    const signedNow = signatures
+    const refusing = provider.request({ method: 'eth_sendTransaction', params: [{ to: COUNTER, data: '0xd09de08a', value: '0x' + (2n * QOR).toString(16) }] }).catch((e: any) => e)
+    await screen.findByRole('dialog', {}, { timeout: 30_000 })
+    expect(screen.getByTestId('qc-label').textContent).toBe('Blocked by chain')
+    expect(screen.queryByText('Confirm in MetaMask')).toBeNull()
+    fireEvent.click(screen.getByText('Close'))
+    const refused = await refusing
+    expect(refused?.data?.qoreconnect?.code).toBe('LIMIT_EXCEEDED')
+    expect(signatures).toBe(signedNow)
+    // Cancel in the preview aborts with EIP-1193 4001.
+    const cancelled = provider.request({ method: 'eth_sendTransaction', params: [{ to: COUNTER, data: '0xd09de08a' }] }).catch((e: any) => e)
+    fireEvent.click(await screen.findByText('Cancel', {}, { timeout: 30_000 }))
+    expect((await cancelled)?.code).toBe(4001)
+    expect(signatures).toBe(signedNow)
+
+    console.log(JSON.stringify({ overLimit: overLimit.checks.map((c: any) => [c.id, c.ok]), notAllowed: notAllowed.checks.map((c: any) => [c.id, c.ok]), root: root.qorAddress, rootEvm: root.evmAddress, metamask: mmAcct.address, tx: screen.getByTestId('hash').textContent, connectMs: tConnected - t0, incrementMs: Date.now() - tConnected, before: String(before), after: String(after) }, null, 2))
   })
 })

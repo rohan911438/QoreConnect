@@ -63,6 +63,13 @@ export function createRelayerApp(d: RelayerDeps) {
     return c.json({ found: true, txHash: r.tx_hash, success: r.success === 1, code: r.code, error: r.error, feeUqor: r.fee_uqor, tankId: r.tank_id, account: r.account, target: r.target, createdAt: r.created_at })
   })
 
+  /** Public: value this account moved through QoreConnect in the last 24 h (estimate for the signing preview). */
+  app.get('/v1/accounts/:account/spent-today', (c) => {
+    const account = c.req.param('account')
+    if (!/^qor1[0-9a-z]{38,58}$/.test(account)) return c.json({ error: 'bad account' }, 400)
+    return c.json({ account, valueUqor: d.store.accountValueToday(account).toString(), windowHours: 24, source: 'qoreconnect-relayer' })
+  })
+
   app.get('/v1/tanks/:id', (c) => {
     const t = d.store.getTank(c.req.param('id'))
     if (!t) return c.json({ found: false }, 404)

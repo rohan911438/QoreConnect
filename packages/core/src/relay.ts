@@ -1,3 +1,4 @@
+import type { SignableCall } from './preview/preview'
 import { buildMetaMaskExecuteEvm, executeEvmMsg, resolveEvmAuthDigestVersion } from '@qorechain/sdk'
 import type { EncodeObject } from '@cosmjs/proto-signing'
 import { DEFAULT_CALL_GAS_LIMIT, type QoreNetwork } from './config'
@@ -89,10 +90,19 @@ export async function signRelayRequest(o: {
   /** Any relayer address; the digest does not bind it. */
   relayerAddress?: string
   fetch?: FetchLike
+  /**
+   * The previewed call (P08). When given, it is signed exactly as shown: account, to, value, data, gasLimit and
+   * nonce all come from this object, so the digest matches what the user read.
+   */
+  call?: SignableCall
 }): Promise<RelayRequest> {
+  if (o.call) {
+    const c = o.call
+    o = { ...o, account: c.account, to: c.to, valueWei: c.valueWei, data: c.data, gasLimit: c.gasLimit, metamaskAddress: c.pubkey }
+  }
   const client = new QoreClient(o.net, o.fetch)
   const [nonce, digestVersion] = await Promise.all([
-    client.getAuthNonce(o.account, o.metamaskAddress),
+    o.call ? o.call.nonce : client.getAuthNonce(o.account, o.metamaskAddress),
     resolveEvmAuthDigestVersion({ rest: o.net.rest, fetch: o.fetch as any }),
   ])
   let msg: EncodeObject
@@ -133,6 +143,18 @@ export class RelayerClient {
       throw new QoreConnectError('RELAYER_UNAVAILABLE', { detail: String(e) })
     })
     return r.json()
+  }
+
+  /** QoreConnect's own record of value moved today (uqor); undefined if the relayer cannot say. */
+  async spentToday(account: string): Promise<bigint | undefined> {
+    try {
+      const r = await this.f(`${this.baseUrl.replace(/\/$/, '')}/v1/accounts/${account}/spent-today`)
+      if (!r.ok) return undefined
+      const j: any = await r.json()
+      return BigInt(j.valueUqor)
+    } catch {
+      return undefined
+    }
   }
 
   async relay(req: RelayRequest): Promise<RelayResponse> {

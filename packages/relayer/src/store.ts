@@ -55,9 +55,11 @@ export class RelayerStore {
         code INTEGER,
         error TEXT,
         fee_uqor TEXT,
+        value_uqor TEXT,
         ip TEXT,
         created_at INTEGER NOT NULL
       );
+      CREATE INDEX IF NOT EXISTS relays_account ON relays(account, created_at);
       CREATE INDEX IF NOT EXISTS relays_tank_account ON relays(tank_id, account, created_at);
       CREATE TABLE IF NOT EXISTS meter_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,26 +70,38 @@ export class RelayerStore {
       );
       CREATE TABLE IF NOT EXISTS meter_snapshots (ts INTEGER PRIMARY KEY, data TEXT NOT NULL);
     `)
+    // Migrations for databases created by earlier versions.
+    const cols = (this.db.prepare('PRAGMA table_info(relays)').all() as { name: string }[]).map((c) => c.name)
+    if (!cols.includes('value_uqor')) this.db.exec('ALTER TABLE relays ADD COLUMN value_uqor TEXT')
   }
 
   /** Record a hit in a rate-limit bucket if fewer than `max` happened within `windowMs`. Returns false when limited. */
   hit(bucket: string, max: number, windowMs: number, now = Date.now()): boolean {
     this.db.prepare('DELETE FROM rate_limits WHERE ts < ?').run(now - 7 * 86_400_000)
-    const row = this.db.prepare('SELECT COUNT(*) AS n FROM rate_limits WHERE bucket = ? AND ts >= ?').get(bucket, now - windowMs) as { n: number }
+    const row = this.db
+      .prepare('SELECT COUNT(*) AS n FROM rate_limits WHERE bucket = ? AND ts >= ?')
+      .get(bucket, now - windowMs) as { n: number }
     if (row.n >= max) return false
     this.db.prepare('INSERT INTO rate_limits (bucket, ts) VALUES (?, ?)').run(bucket, now)
     return true
   }
 
   findSponsorship(metamask: string, root: string): any {
-    return this.db.prepare('SELECT * FROM sponsorships WHERE metamask = ? OR root = ?').get(metamask.toLowerCase(), root)
+    return this.db
+      .prepare('SELECT * FROM sponsorships WHERE metamask = ? OR root = ?')
+      .get(metamask.toLowerCase(), root)
   }
 
   /** Reserve a sponsorship slot atomically (UNIQUE constraints). Returns the row id, or undefined if taken. */
-  reserveSponsorship(p: { metamask: string; root: string; ip: string; amountUqor: string }, now = Date.now()): number | undefined {
+  reserveSponsorship(
+    p: { metamask: string; root: string; ip: string; amountUqor: string },
+    now = Date.now(),
+  ): number | undefined {
     try {
       const r = this.db
-        .prepare(`INSERT INTO sponsorships (metamask, root, ip, amount_uqor, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)`)
+        .prepare(
+          `INSERT INTO sponsorships (metamask, root, ip, amount_uqor, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)`,
+        )
         .run(p.metamask.toLowerCase(), p.root, p.ip, p.amountUqor, now)
       return Number(r.lastInsertRowid)
     } catch {
@@ -105,16 +119,38 @@ export class RelayerStore {
   }
 
   sponsoredToday(now = Date.now()): bigint {
-    const rows = this.db.prepare('SELECT amount_uqor FROM sponsorships WHERE created_at >= ?').all(now - 86_400_000) as { amount_uqor: string }[]
+    const rows = this.db
+      .prepare('SELECT amount_uqor FROM sponsorships WHERE created_at >= ?')
+      .all(now - 86_400_000) as { amount_uqor: string }[]
     return rows.reduce((a, r) => a + BigInt(r.amount_uqor), 0n)
   }
 
   // ---- gas tanks ----
 
-  createTank(t: { id: string; name: string; owner: string; balanceUqor: bigint; perUserDailyCapUqor: bigint; allowedContracts?: string[] }, now = Date.now()): Tank {
+  createTank(
+    t: {
+      id: string
+      name: string
+      owner: string
+      balanceUqor: bigint
+      perUserDailyCapUqor: bigint
+      allowedContracts?: string[]
+    },
+    now = Date.now(),
+  ): Tank {
     this.db
-      .prepare('INSERT INTO tanks (id, name, owner, balance_uqor, per_user_daily_cap_uqor, allowed_contracts, paused, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)')
-      .run(t.id, t.name, t.owner, t.balanceUqor.toString(), t.perUserDailyCapUqor.toString(), t.allowedContracts?.length ? JSON.stringify(t.allowedContracts.map((c) => c.toLowerCase())) : null, now)
+      .prepare(
+        'INSERT INTO tanks (id, name, owner, balance_uqor, per_user_daily_cap_uqor, allowed_contracts, paused, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)',
+      )
+      .run(
+        t.id,
+        t.name,
+        t.owner,
+        t.balanceUqor.toString(),
+        t.perUserDailyCapUqor.toString(),
+        t.allowedContracts?.length ? JSON.stringify(t.allowedContracts.map((c) => c.toLowerCase())) : null,
+        now,
+      )
     return this.getTank(t.id)!
   }
 
@@ -137,7 +173,12 @@ export class RelayerStore {
     if (!t) return undefined
     this.db
       .prepare('UPDATE tanks SET balance_uqor = ?, per_user_daily_cap_uqor = ?, paused = ? WHERE id = ?')
-      .run((patch.balanceUqor ?? t.balanceUqor).toString(), (patch.perUserDailyCapUqor ?? t.perUserDailyCapUqor).toString(), (patch.paused ?? t.paused) ? 1 : 0, id)
+      .run(
+        (patch.balanceUqor ?? t.balanceUqor).toString(),
+        (patch.perUserDailyCapUqor ?? t.perUserDailyCapUqor).toString(),
+        (patch.paused ?? t.paused) ? 1 : 0,
+        id,
+      )
     return this.getTank(id)
   }
 
@@ -152,28 +193,78 @@ export class RelayerStore {
   /** Fees this account consumed from this tank in the last 24 h. */
   accountSpentToday(tankId: string, account: string, now = Date.now()): bigint {
     const rows = this.db
-      .prepare('SELECT fee_uqor FROM relays WHERE tank_id = ? AND account = ? AND created_at >= ? AND fee_uqor IS NOT NULL')
+      .prepare(
+        'SELECT fee_uqor FROM relays WHERE tank_id = ? AND account = ? AND created_at >= ? AND fee_uqor IS NOT NULL',
+      )
       .all(tankId, account, now - 86_400_000) as { fee_uqor: string }[]
     return rows.reduce((a, r) => a + BigInt(r.fee_uqor), 0n)
   }
 
   tankSpentToday(tankId: string, now = Date.now()): bigint {
-    const rows = this.db.prepare('SELECT fee_uqor FROM relays WHERE tank_id = ? AND created_at >= ? AND fee_uqor IS NOT NULL').all(tankId, now - 86_400_000) as { fee_uqor: string }[]
+    const rows = this.db
+      .prepare('SELECT fee_uqor FROM relays WHERE tank_id = ? AND created_at >= ? AND fee_uqor IS NOT NULL')
+      .all(tankId, now - 86_400_000) as { fee_uqor: string }[]
     return rows.reduce((a, r) => a + BigInt(r.fee_uqor), 0n)
   }
 
-  recordRelay(r: { tankId: string; account: string; signer: string; target?: string; txHash?: string; success?: boolean; code?: number; error?: string; feeUqor?: bigint; ip?: string }, now = Date.now()) {
+  recordRelay(
+    r: {
+      tankId: string
+      account: string
+      signer: string
+      target?: string
+      txHash?: string
+      success?: boolean
+      code?: number
+      error?: string
+      feeUqor?: bigint
+      valueUqor?: bigint
+      ip?: string
+    },
+    now = Date.now(),
+  ) {
     this.db
-      .prepare('INSERT INTO relays (tank_id, account, signer, target, tx_hash, success, code, error, fee_uqor, ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(r.tankId, r.account, r.signer, r.target ?? null, r.txHash ?? null, r.success === undefined ? null : r.success ? 1 : 0, r.code ?? null, r.error ?? null, r.feeUqor?.toString() ?? null, r.ip ?? null, now)
+      .prepare(
+        'INSERT INTO relays (tank_id, account, signer, target, tx_hash, success, code, error, fee_uqor, value_uqor, ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        r.tankId,
+        r.account,
+        r.signer,
+        r.target ?? null,
+        r.txHash ?? null,
+        r.success === undefined ? null : r.success ? 1 : 0,
+        r.code ?? null,
+        r.error ?? null,
+        r.feeUqor?.toString() ?? null,
+        r.valueUqor?.toString() ?? null,
+        r.ip ?? null,
+        now,
+      )
+  }
+
+  /** Value moved by successful relayed calls for this account in the last 24 h (QoreConnect's records; an estimate of chain-side daily spend). */
+  accountValueToday(account: string, now = Date.now()): bigint {
+    const rows = this.db
+      .prepare(
+        'SELECT value_uqor FROM relays WHERE account = ? AND success = 1 AND created_at >= ? AND value_uqor IS NOT NULL',
+      )
+      .all(account, now - 86_400_000) as { value_uqor: string }[]
+    return rows.reduce((a, r) => a + BigInt(r.value_uqor), 0n)
   }
 
   getRelay(txHash: string): any {
-    return this.db.prepare('SELECT tank_id, account, signer, target, tx_hash, success, code, error, fee_uqor, created_at FROM relays WHERE tx_hash = ?').get(txHash.toUpperCase())
+    return this.db
+      .prepare(
+        'SELECT tank_id, account, signer, target, tx_hash, success, code, error, fee_uqor, created_at FROM relays WHERE tx_hash = ?',
+      )
+      .get(txHash.toUpperCase())
   }
 
   recordMeterEvent(kind: string, account?: string, txHash?: string, now = Date.now()) {
-    this.db.prepare('INSERT INTO meter_events (kind, account, tx_hash, created_at) VALUES (?, ?, ?, ?)').run(kind, account ?? null, txHash ?? null, now)
+    this.db
+      .prepare('INSERT INTO meter_events (kind, account, tx_hash, created_at) VALUES (?, ?, ?, ?)')
+      .run(kind, account ?? null, txHash ?? null, now)
   }
 
   close() {
