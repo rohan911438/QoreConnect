@@ -20,6 +20,7 @@
     "dev:web": "pnpm --filter @qoreconnect/web dev",
     "dev:relayer": "pnpm --filter @qoreconnect/relayer-app dev",
     "dev:demo": "pnpm --filter @qoreconnect/demo-dapp dev",
+    "demo:attack": "pnpm --filter @qoreconnect/demo-dapp demo:attack",
     "release": "pnpm build:packages && pnpm -r --filter \"./packages/**\" publish --access public --no-git-checks"
   },
   "devDependencies": {

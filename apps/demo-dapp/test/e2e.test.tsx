@@ -16,8 +16,8 @@ import { DIANA, MemoryVaultStorage, QoreClient, RootVault } from '@qoreconnect/c
 import { qoreConnect, qoreTransport, qorechainDiana } from '@qoreconnect/wagmi'
 import { QoreConnectProvider, createQoreConnectUI } from '@qoreconnect/react'
 import { ChainFundsSender, ChainRelay, DEFAULT_SPONSOR, RelayService, RelayerStore, SponsorService, createRelayerApp, operatorAccount } from '@qoreconnect/relayer'
-import { App } from '../src/App'
-import { COUNTER, counterAbi } from '../src/counter'
+import { CounterApp as App } from './CounterApp'
+import { COUNTER, counterAbi } from './counter'
 
 dotenv({ path: resolve(import.meta.dirname, '../../../.env'), quiet: true } as any)
 const MNEMONIC = process.env.SPONSOR_MNEMONIC

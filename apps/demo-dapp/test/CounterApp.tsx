@@ -2,7 +2,7 @@ import { useAccount, useConnect, useReadContract, useWaitForTransactionReceipt, 
 import { COUNTER, counterAbi } from './counter'
 
 /** A plain wagmi component: nothing QoreChain- or QoreConnect-specific here. */
-export function App() {
+export function CounterApp() {
   const { address, isConnected } = useAccount()
   const { connect, connectors, error: connectError, isPending: connecting } = useConnect()
   const { data: count, refetch } = useReadContract({ address: COUNTER, abi: counterAbi, functionName: 'count' })

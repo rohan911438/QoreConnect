@@ -1,22 +1,16 @@
 import { createConfig } from 'wagmi'
-import { qoreConnect, qoreTransport, qorechainDiana } from '@qoreconnect/wagmi'
-import { createQoreConnectUI } from '@qoreconnect/react'
-import { COUNTER, counterAbi } from './counter'
+import { qoreConnect, qoreTransport, qorechainDiana } from '@qoreconnect/wagmi' // QoreConnect 1/9
+import { createQoreConnectUI } from '@qoreconnect/react' // QoreConnect 2/9
+import { TIPJAR, tipJarAbi } from './contracts'
 
-/** QoreConnect's modals (signing preview); rendered by <QoreConnectProvider ui={ui}> in main.tsx. */
-export const ui = createQoreConnectUI()
+export const ui = createQoreConnectUI() // QoreConnect 3/9: onboarding, approval and signing-preview modals
 
 export const config = createConfig({
   chains: [qorechainDiana],
   connectors: [
-    qoreConnect({
-      appName: 'Quantum Tip Jar',
-      contracts: [COUNTER],
-      relayerUrl: import.meta.env.VITE_RELAYER_URL ?? 'http://localhost:8787',
-      gasTankId: 'demo-dapp',
-      ui: ui.hooks,
-      advanced: { abis: { [COUNTER]: { abi: counterAbi, name: 'Counter' } } },
-    }),
+    qoreConnect({ appName: 'Quantum Tip Jar', contracts: [TIPJAR], gasTankId: 'demo-dapp', ui: ui.hooks, // QoreConnect 4/9
+      relayerUrl: import.meta.env.VITE_RELAYER_URL ?? 'http://localhost:8787', // QoreConnect 5/9
+      advanced: { abis: { [TIPJAR]: { abi: tipJarAbi, name: 'Quantum Tip Jar' } } } }), // QoreConnect 6/9 (readable previews)
   ],
-  transports: { [qorechainDiana.id]: qoreTransport() },
+  transports: { [qorechainDiana.id]: qoreTransport() }, // QoreConnect 7/9 (drop-in for http())
 })

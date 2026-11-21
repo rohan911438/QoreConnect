@@ -7,7 +7,8 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "test:e2e": "vitest run"
+    "test:e2e": "vitest run",
+    "demo:attack": "tsx scripts/attack.ts"
   },
   "dependencies": {
     "@qoreconnect/react": "workspace:*",
@@ -21,6 +22,8 @@
   "devDependencies": {
     "@qoreconnect/core": "workspace:*",
     "@qoreconnect/relayer": "workspace:*",
+    "@qorechain/sdk": "0.14.0",
+    "tsx": "^4.20.0",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

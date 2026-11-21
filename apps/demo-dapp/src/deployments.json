@@ -1,0 +1,25 @@
+{
+  "network": "qorechain-diana",
+  "chainId": 9800,
+  "deployedAt": "2026-11-21T16:22:44.893Z",
+  "deployer": "0x707B92f6276799f928CCe4D5873f5A2babF85347",
+  "attacker": "0x5d3dff8f9b46FdeD264003B1b187AC5B316fD534",
+  "guardOwner": "0x789F00F2F6705ed10DF035477fc72d3C4470E4E4",
+  "contracts": {
+    "QoreTipJar": {
+      "address": "0x42653b89eff2a993cf2767fedef783366f53aea4",
+      "tx": "0x24f70a3e3bafce83258cdc8591881f1d10864fcd05b547cddeb125d7d272d556",
+      "codeBytes": 1456
+    },
+    "Drainer": {
+      "address": "0x36003c3cea4a8e38cff894cce2c1d1be94e23baa",
+      "tx": "0xc91afac0a3bc362dfb60e01c66923a5aa7cdee22fb8fa9bf36fc4ca084581bf0",
+      "codeBytes": 512
+    },
+    "QoreConnectGuard": {
+      "address": "0x1a5b03240e7b3ce11fb8e59ef5da1cb60fbe9eab",
+      "tx": "0x8ae533d1811a4f093ac06208b3bfdc65b2d8f98940e87e694eccf2c43669eca5",
+      "codeBytes": 3091
+    }
+  }
+}
