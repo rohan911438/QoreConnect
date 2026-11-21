@@ -32,10 +32,18 @@ export function Header() {
           <path d="M48 14 76 25v21c0 18-12 30-28 36-16-6-28-18-28-36V25z" fill="none" stroke="currentColor" strokeWidth="7" strokeLinejoin="round" />
           <circle cx="48" cy="46" r="11" fill="none" stroke="currentColor" strokeWidth="7" />
         </svg>
-        QoreConnect
-        <span className="rounded-full bg-warn-bg px-2 py-0.5 text-xs font-medium text-warn">Diana testnet</span>
+        <span className="hidden min-[440px]:inline">QoreConnect</span>
+        <span className="rounded-full bg-warn-bg px-2 py-0.5 text-xs font-medium text-warn">
+          <span className="hidden sm:inline">Diana </span>testnet
+        </span>
       </Link>
-      <nav className="flex items-center gap-1 text-sm sm:gap-3">
+      <nav className="flex items-center gap-0.5 text-sm sm:gap-3">
+        <Link href="/meter" className="rounded-lg px-2 py-1.5 hover:bg-panel">
+          Meter
+        </Link>
+        <Link href="/doctor" className="rounded-lg px-2 py-1.5 hover:bg-panel">
+          Doctor
+        </Link>
         <Link href="/account" className="rounded-lg px-2 py-1.5 hover:bg-panel">
           Account
         </Link>

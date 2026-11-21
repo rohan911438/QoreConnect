@@ -12,6 +12,7 @@ import {
   getSessionState,
   linkSessionKey,
   parseQor,
+  approveDapp,
   removeDapp,
   revokeKeys,
   setLimits,
@@ -75,6 +76,8 @@ export default function AccountPage() {
   const [notice, setNotice] = useState<{ tone: 'ok' | 'bad'; text: ReactNode }>()
   const [killed, setKilled] = useState(false)
   const [mmAddress, setMmAddress] = useState<string>()
+  /** Set by the Doctor's "Approve this dApp" fix: /account?approve=0x…#dapps */
+  const [approveTarget, setApproveTarget] = useState<string>()
 
   const load = useCallback(async () => {
     const { vault, net } = qore()
@@ -100,6 +103,8 @@ export default function AccountPage() {
     void load()
     const p = qore().provider
     setMmAddress(p.sessionKeyAddress)
+    const t = new URLSearchParams(location.search).get('approve')?.toLowerCase()
+    if (t && /^0x[0-9a-f]{40}$/.test(t)) setApproveTarget(t)
   }, [load])
 
   /** Run a root-signed change: unlock (passkey tap or password), sign, reload. */
@@ -281,6 +286,26 @@ export default function AccountPage() {
       </Card>
 
       <Card title="Approved dApps" id="dapps">
+        {approveTarget && state && !state.approved.includes(approveTarget) && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-warn-bg px-4 py-3 text-sm text-warn" data-testid="approve-from-doctor">
+            <span>
+              Approve <Mono>{short(approveTarget)}</Mono>
+              {CONTRACT_NAMES[approveTarget] ? ` (${CONTRACT_NAMES[approveTarget]})` : ''} so MetaMask can call it within your limits?
+            </span>
+            <Btn
+              disabled={!!busy}
+              onClick={() =>
+                rootAction('Approve this dApp', async ({ root }) => {
+                  await approveDapp({ net, root, contracts: [approveTarget] })
+                  setApproveTarget(undefined)
+                  return 'Approved. MetaMask can now call this contract for your account, within your limits.'
+                })
+              }
+            >
+              Approve
+            </Btn>
+          </div>
+        )}
         {!state ? (
           <p className="text-sm text-muted">Loading…</p>
         ) : state.approved.length === 0 ? (

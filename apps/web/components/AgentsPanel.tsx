@@ -102,7 +102,7 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-line bg-surface p-5" aria-labelledby="agents">
+    <section className="space-y-4 rounded-2xl border border-line bg-panel p-5" aria-labelledby="agents">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="agents" className="text-lg font-semibold">
           Agents
@@ -113,7 +113,7 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
               Show agents
             </button>
           )}
-          <button type="button" className="rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-accent-ink" disabled={busy} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          <button type="button" className="rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-accent-fg" disabled={busy} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
             New agent
           </button>
         </div>
@@ -169,7 +169,7 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
             <span className="text-xs text-muted">About 0.07 QOR of it pays the agent account's key registration.</span>
           </label>
           <div className="flex items-end">
-            <button type="submit" className="w-full rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-accent-ink" disabled={busy}>
+            <button type="submit" className="w-full rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-accent-fg" disabled={busy}>
               Create agent with passkey
             </button>
           </div>

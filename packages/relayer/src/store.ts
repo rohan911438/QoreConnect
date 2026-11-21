@@ -69,6 +69,7 @@ export class RelayerStore {
         created_at INTEGER NOT NULL
       );
       CREATE TABLE IF NOT EXISTS meter_snapshots (ts INTEGER PRIMARY KEY, data TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS meter_evidence (id INTEGER PRIMARY KEY CHECK (id = 1), ts INTEGER NOT NULL, data TEXT NOT NULL);
     `)
     // Migrations for databases created by earlier versions.
     const cols = (this.db.prepare('PRAGMA table_info(relays)').all() as { name: string }[]).map((c) => c.name)
@@ -285,6 +286,64 @@ export class RelayerStore {
     this.db
       .prepare('INSERT INTO meter_events (kind, account, tx_hash, created_at) VALUES (?, ?, ?, ?)')
       .run(kind, account ?? null, txHash ?? null, now)
+  }
+
+
+  /** Raw inputs for the Migration Meter (docs/migration-meter.md). */
+  meterInputs() {
+    const sponsored = this.db.prepare(`SELECT root, tx_hash AS txHash FROM sponsorships WHERE status = 'funded' ORDER BY id`).all() as { root: string; txHash: string | null }[]
+    const relayAccounts = (this.db.prepare('SELECT DISTINCT account FROM relays WHERE tx_hash IS NOT NULL').all() as { account: string }[]).map((r) => r.account)
+    const executedRows = this.db.prepare('SELECT value_uqor FROM relays WHERE success = 1').all() as { value_uqor: string | null }[]
+    const refusals = this.db.prepare('SELECT code, COUNT(*) AS n FROM relays WHERE success = 0 AND tx_hash IS NOT NULL GROUP BY code').all() as { code: number | null; n: number }[]
+    const preRejected = (this.db.prepare('SELECT COUNT(*) AS n FROM relays WHERE success = 0 AND tx_hash IS NULL').get() as { n: number }).n
+    const recent = (
+      this.db.prepare('SELECT tx_hash, account, target, success, code, value_uqor, created_at FROM relays ORDER BY id DESC LIMIT 200').all() as any[]
+    ).map((x) => ({
+      txHash: x.tx_hash as string | null,
+      account: x.account as string,
+      target: x.target as string | null,
+      success: x.success === null ? null : x.success === 1,
+      code: x.code as number | null,
+      valueUqor: x.value_uqor as string | null,
+      at: x.created_at as number,
+    }))
+    const dapps = this.db
+      .prepare('SELECT t.id AS tankId, t.name AS name, COUNT(r.id) AS executions FROM tanks t JOIN relays r ON r.tank_id = t.id AND r.success = 1 GROUP BY t.id ORDER BY executions DESC')
+      .all() as { tankId: string; name: string; executions: number }[]
+    const refusalsByCode: Record<string, number> = {}
+    for (const r of refusals) refusalsByCode[String(r.code ?? 'unknown')] = r.n
+    return {
+      sponsored,
+      relayAccounts,
+      relays: {
+        executed: executedRows.length,
+        valueUqor: executedRows.reduce((s, r) => s + BigInt(r.value_uqor ?? 0), 0n),
+        chainRefusals: refusals.reduce((s, r) => s + r.n, 0),
+        refusalsByCode,
+        preRejected,
+        recent,
+      },
+      dapps,
+    }
+  }
+
+  /** Store a snapshot (headline numbers, kept as a series) and replace the evidence rows (latest only). */
+  saveMeterSnapshot(ts: number, data: string, evidence: string) {
+    this.db.prepare('INSERT OR REPLACE INTO meter_snapshots (ts, data) VALUES (?, ?)').run(ts, data)
+    this.db.prepare('INSERT OR REPLACE INTO meter_evidence (id, ts, data) VALUES (1, ?, ?)').run(ts, evidence)
+  }
+
+  latestMeterEvidence(): { ts: number; data: string } | undefined {
+    return this.db.prepare('SELECT ts, data FROM meter_evidence WHERE id = 1').get() as { ts: number; data: string } | undefined
+  }
+
+  latestMeterSnapshot(): string | undefined {
+    return (this.db.prepare('SELECT data FROM meter_snapshots ORDER BY ts DESC LIMIT 1').get() as { data: string } | undefined)?.data
+  }
+
+  /** Stored snapshots, oldest first (at most `limit`, most recent kept). */
+  meterSnapshots(limit = 2000): string[] {
+    return (this.db.prepare('SELECT data FROM (SELECT ts, data FROM meter_snapshots ORDER BY ts DESC LIMIT ?) ORDER BY ts ASC').all(limit) as { data: string }[]).map((r) => r.data)
   }
 
   close() {

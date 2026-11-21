@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { serve } from '@hono/node-server'
 import { DIANA, QoreClient, type QoreNetwork } from '@qoreconnect/core'
-import { ChainFundsSender, ChainRelay, ensurePqcRegistered, DEFAULT_SPONSOR, RelayService, RelayerStore, SponsorService, createRelayerApp, operatorAccount } from '@qoreconnect/relayer'
+import { ChainFundsSender, ChainRelay, ensurePqcRegistered, DEFAULT_SPONSOR, MeterIndexer, RelayService, RelayerStore, RpcEvmSampler, SponsorService, createRelayerApp, operatorAccount } from '@qoreconnect/relayer'
 
 // Load the repo-root .env first, then a local one (local wins).
 config({ path: resolve(import.meta.dirname, '../../../.env') })
@@ -59,7 +59,23 @@ const sponsor = new SponsorService(
 
 const relay = new RelayService(net, store, new ChainRelay(net, relayerAccount))
 
+// Migration Meter indexer (docs/migration-meter.md). METER_INTERVAL_MS=0 disables it.
+const meterInterval = Number(process.env.METER_INTERVAL_MS ?? 15 * 60_000)
+const meter = meterInterval > 0
+  ? new MeterIndexer(
+      { net, store, chain: client, sampler: new RpcEvmSampler(net.evmRpc) },
+      {
+        intervalMs: meterInterval,
+        publicUrl: process.env.RELAYER_PUBLIC_URL,
+        sampleBlocks: Number(process.env.METER_SAMPLE_BLOCKS ?? 200),
+        maxSenders: Number(process.env.METER_MAX_SENDERS ?? 50),
+        log: (m) => console.log(m),
+      },
+    )
+  : undefined
+
 const app = createRelayerApp({
+  meter,
   net,
   store,
   sponsor,
@@ -72,3 +88,4 @@ const app = createRelayerApp({
 
 const port = Number(process.env.RELAYER_PORT ?? 8787)
 serve({ fetch: app.fetch, port }, (i) => console.log(`QoreConnect relayer on :${i.port} (sponsor ${sponsorAccount.cosmos}, relayer ${relayerAccount.cosmos})`))
+meter?.start()

@@ -53,3 +53,22 @@ Reproduce: `pnpm --filter @qoreconnect/example-agent test:integration`.
 
 Offline (no chain): unsigned, tampered, expired and wrong-agent instructions are rejected before any planning, and
 a compromised planner's off-list call is refused by the local guard with nothing signed.
+
+## Doctor and Migration Meter (P12)
+
+Reproduce: `pnpm --filter @qoreconnect/demo-dapp gate:p12` (onboards a fresh root, links MetaMask for the Tip Jar with
+a 75-second expiry, runs the Doctor before and after expiry, then computes one meter snapshot).
+
+| Case | Account | Doctor's first failure | Fix offered |
+|---|---|---|---|
+| Fresh address (no key) | random `qor1mh9wzewf…w0r` | `pqc-key`: no ML-DSA-87 key registered | Onboard |
+| Healthy (Tip Jar, gas tank funded) | `qor1dzlz4evz92ztl8f9ll7j3pd0prpcnjx88jl4hf` | none (all pass, EVM window informational) | n/a |
+| Contract not approved (Drainer) | same | `target`: not on the allow-list (chain code 10) | Approve this dApp |
+| Linked but expired | same, after 18:02 UTC | `linked-key`: "expired on 2026-11-21 18:02 UTC" | Renew MetaMask |
+
+Link tx `BED9ED34907968A90C21E9C5FBDC646BFCB727A09A523770B182BC3FFC4C2B38`.
+
+Meter: the EVM sender sample over 200 blocks (10,507,040–10,507,239) took 41 s and found 5 distinct senders, all with
+a registered ML-DSA key. A second snapshot found 4 of 4; each was re-checked through REST
+`/qorechain/pqc/v1/account/{address}` (`found: true`), agreeing with the `pqcKeyStatus` precompile on 4 of 4.
+Diana's EVM lane is quiet, so the meter labels this number a sample with its size and block range.

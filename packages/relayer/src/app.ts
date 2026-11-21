@@ -5,6 +5,8 @@ import type { RelayerStore } from './store'
 import type { SponsorService } from './sponsor'
 import type { RelayService } from './relay'
 import { timingSafeEqual } from 'node:crypto'
+import { meterHeadline, meterPoint, type MeterIndexer } from './meter'
+import { DoctorInputError, runDoctor } from './doctor'
 
 export interface RelayerDeps {
   net: QoreNetwork
@@ -18,6 +20,8 @@ export interface RelayerDeps {
   /** Resolve the caller IP. Behind a proxy, trust only the platform's header. */
   ip?: (header: (name: string) => string | undefined) => string
   corsOrigins?: string[]
+  /** Migration Meter indexer (enables POST /v1/meter/refresh). */
+  meter?: MeterIndexer
 }
 
 export function createRelayerApp(d: RelayerDeps) {
@@ -152,6 +156,49 @@ export function createRelayerApp(d: RelayerDeps) {
       { created: true, id: t.id, balance: t.balanceUqor.toString(), perUserDailyCap: t.perUserDailyCapUqor.toString() },
       201,
     )
+  })
+
+  // ---- Migration Meter (P12, docs/migration-meter.md) ----
+  const EVIDENCE = new Set(['onboarded', 'keys', 'relays', 'senders', 'dapps'])
+  app.get('/v1/meter', (c) => {
+    const s = d.store.latestMeterSnapshot()
+    if (!s) return c.json({ error: 'no snapshot yet', hint: 'the indexer runs every few minutes' }, 503)
+    c.header('cache-control', 'public, max-age=60')
+    return c.json(JSON.parse(s))
+  })
+  app.get('/v1/meter/series', (c) => {
+    c.header('cache-control', 'public, max-age=60')
+    return c.json({ points: d.store.meterSnapshots(2000).map((s) => meterPoint({ ...JSON.parse(s), evidence: undefined })) })
+  })
+  app.get('/v1/meter/evidence/:metric', (c) => {
+    const m = c.req.param('metric')
+    if (!EVIDENCE.has(m)) return c.json({ error: `unknown metric; one of ${[...EVIDENCE].join(', ')}` }, 404)
+    const e = d.store.latestMeterEvidence()
+    if (!e) return c.json({ error: 'no snapshot yet' }, 503)
+    c.header('cache-control', 'public, max-age=60')
+    return c.json({ metric: m, snapshotTs: e.ts, definition: `docs/migration-meter.md`, rows: JSON.parse(e.data)[m] })
+  })
+  /** Admin: compute a snapshot now. */
+  app.post('/v1/meter/refresh', async (c) => {
+    if (!isAdmin(c.req.header('authorization'))) return c.json({ error: 'unauthorized' }, 401)
+    if (!d.meter) return c.json({ error: 'meter disabled' }, 404)
+    return c.json(meterHeadline(await d.meter.runOnce()))
+  })
+
+  // ---- Doctor (Flow G) ----
+  app.get('/v1/doctor/:address', async (c) => {
+    if (!d.store.hit(`doctor:${ipOf((n) => c.req.header(n))}`, 30, 60_000)) return c.json({ error: 'slow down' }, 429)
+    try {
+      const report = await runDoctor(
+        client,
+        { address: c.req.param('address'), target: c.req.query('target'), selector: c.req.query('selector'), tankId: c.req.query('tank'), signer: c.req.query('signer') },
+        { getTank: (id) => d.store.getTank(id) },
+      )
+      return c.json(report)
+    } catch (e) {
+      if (e instanceof DoctorInputError) return c.json({ error: e.message }, 400)
+      return c.json({ error: `chain query failed: ${(e as Error).message}` }, 502)
+    }
   })
 
   return app

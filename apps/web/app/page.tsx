@@ -14,8 +14,8 @@ const FEATURES: { title: string; body: string; status: 'Shipped' | 'In progress'
   { title: 'Gasless onboarding', body: 'Setup fees are sponsored and dApps pay gas from a gas tank.', status: 'Shipped' },
   { title: 'Never sign blind', body: 'A readable preview before MetaMask opens: decoded call, simulation, and the chain’s limits checked first.', status: 'Shipped' },
   { title: 'Q-Day kill switch', body: 'One passkey tap revokes every classical key. Only your quantum-safe root can act after that.', status: 'Shipped' },
-  { title: 'Agent mode', body: 'AI agents get their own capped sub-accounts with honest labels.', status: 'In progress' },
-  { title: 'Migration Meter', body: 'A public count of accounts with a post-quantum root. A number that can be checked is a fact.', status: 'In progress' },
+  { title: 'Agent mode', body: 'AI agents get their own capped sub-accounts and act only on instructions signed by your quantum-safe root.', status: 'Shipped' },
+  { title: 'Migration Meter', body: 'A public count of accounts with a post-quantum root. A number that can be checked is a fact.', status: 'Shipped' },
 ]
 
 const TONE = { Shipped: 'bg-ok-bg text-ok', 'In progress': 'bg-warn-bg text-warn', Planned: 'bg-line text-muted' }

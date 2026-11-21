@@ -4,6 +4,7 @@ import { Providers } from './providers'
 import { Header } from '../components/Header'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   title: 'QoreConnect',
   description: 'The migration layer for the migration year. Quantum-safe root, MetaMask convenience. Live on QoreChain Diana testnet.',
 }
