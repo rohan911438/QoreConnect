@@ -47,7 +47,9 @@ Read them in that order: idea, then tracks, then architecture, then prompts.
 ## Where we compete
 
 - **Main category:** Post-Quantum AI Agents ($1,500 / $750). See [`tracks/02-main-track-pq-ai-agents.md`](tracks/02-main-track-pq-ai-agents.md).
-- **Side awards:** People's Choice, Best AI-Native Build. Top-Quality and Regional are fallbacks. See [`tracks/03-side-awards.md`](tracks/03-side-awards.md).
+- **Side awards (targets):** People's Choice, Best AI-Native Build, **Quantum Campus** (the team is eligible: all members are enrolled students).
+- **Fallback awards (entered):** **Regional Awards** (5 × $200) and **Top-Quality Awards** (7 × $250, jury score ≥ 70/100). Both are paid only to projects that win no other prize.
+- **Best case:** $1,500 + $500 + $500 + $500 = **$3,000**. See [`tracks/03-side-awards.md`](tracks/03-side-awards.md).
 - **After the fest:** Association Grant (up to $10,000 in QOR).
 - **Fallback category:** Post-Quantum dApp, if the organisers say we do not fit AI Agents.
 

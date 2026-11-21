@@ -32,7 +32,9 @@ Everything required to submit, from build.qorechain.io rules and /start. There i
 - [ ] At least one QoreChain testnet address (`qor1...`) the project uses: sponsor, relayer, demo user, demo contracts
 - [ ] Kits and network features ticked: **only what is really in the code** (verified from the repo)
 - [ ] AI-native tick (for Best AI-Native Build)
-- [ ] Quantum Campus tick (only if all members are verified students)
+- [ ] **Quantum Campus** tick, with every team member's student email verified (the team is eligible)
+- [ ] **Regional Awards**: region selected (fallback award; only paid if we win no other prize)
+- [ ] **Top-Quality Awards**: no form field; requires a jury score of at least 70/100 (fallback award)
 
 ## Technical checks (the automatic checks run 3–5 Dec)
 

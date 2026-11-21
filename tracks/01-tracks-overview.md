@@ -30,9 +30,9 @@ Everything about the fest's categories, awards and rules that affects our choice
 | Q-Day Survivor | 5 × $200 | Q-Day Drill on 18 Nov | **Closed** (registration ended 17 Nov) |
 | **People's Choice** | $500 / $300 / $200 | QoreX mainnet community vote, 6–15 Dec; 3 votes per wallet with at least 10 QOR, max 1 per project; no self-votes | **Target** |
 | **Best AI-Native Build** | $500 | `AI_USAGE.md` in the repo + AI-native tick on the form | **Target** |
-| Quantum Campus | $500 | Every team member is a verified enrolled student | Only if the team qualifies |
-| Regional Awards | 5 × $200 | Region chosen on the form; **only projects that win no other prize** | Fallback |
-| Top-Quality Awards | 7 × $250 | Highest-scored projects with **no other prize**, at least 70/100 from the jury | Fallback |
+| **Quantum Campus** | $500 | Every team member is a verified enrolled student | **Target: the team is eligible** |
+| **Regional Awards** | 5 × $200 | Region chosen on the form; **only projects that win no other prize** | **Fallback: entered** |
+| **Top-Quality Awards** | 7 × $250 | Highest-scored projects with **no other prize**, at least 70/100 from the jury | **Fallback: entered** |
 
 ## Grants (after the fest)
 

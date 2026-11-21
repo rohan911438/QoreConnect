@@ -16,7 +16,7 @@
 > 2. **`AI_USAGE.md`** following the outline in `tracks/03-side-awards.md`, with a per-component table and concrete examples of AI mistakes caught by validation gates (from `STATUS.md`).
 > 3. **Video (≤ 3:00)** following the plan in `idea/02-solution.md`. Write `docs/video-script.md` with timings and narration; record screen with a visible timer for onboarding; include the attack refusal and the kill switch; end with the Migration Meter. Export 1080p. Upload (YouTube unlisted or as required by the form).
 > 4. **Cover image** 1600 × 900 (16:9, ≥ 1200 × 675, ≤ 5 MB): product name, tagline, a clean visual of root key → capped session key; "Built on QoreChain" small.
-> 5. **Project form:** title, description, category (Post-Quantum AI Agents or the decided fallback), video, cover, testnet addresses (sponsor, relayer, demo root, contracts), kits ticked (only those really in the code), AI-native tick, region, Quantum Campus only if eligible.
+> 5. **Project form:** title, description, category (Post-Quantum AI Agents or the decided fallback), video, cover, testnet addresses (sponsor, relayer, demo root, contracts), kits ticked (only those really in the code), AI-native tick, region (for Regional Awards), Quantum Campus tick with every member's student email verified (the team is eligible). Top-Quality Awards need no form field.
 > 6. **Install the "QoreChain Build GitHub App"** on the repo from My space; make the repo public; confirm the licence is detected.
 > 7. Walk through every box in `tracks/04-submission-checklist.md` and tick it in the file.
 

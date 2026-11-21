@@ -11,9 +11,32 @@ Special awards are open to every eligible project in addition to its category bo
 | Post-Quantum AI Agents, 1st | $1,500 |
 | Best AI-Native Build | $500 |
 | People's Choice, 1st | $500 |
-| **Total** | **$2,500** |
+| Quantum Campus (team is eligible) | $500 |
+| **Total** | **$3,000** |
 
 Plus an Association Grant application (up to $10,000 in QOR) from January 2027.
+
+## Floor case (if we win no other prize)
+
+Regional Awards and Top-Quality Awards go **only** to projects that win nothing else, so they work as a safety net. Because we target both, a strong submission that misses the category podium can still take:
+
+| Award | Amount |
+|---|---|
+| Top-Quality Award (jury score ≥ 70/100) | $250 |
+| Regional Award (our region) | $200 |
+
+Whether a project can hold both fallback awards at once is not stated in the rules; ask the organisers.
+
+## All awards we are entering
+
+| Award | Prize | Eligibility | Our status |
+|---|---|---|---|
+| Post-Quantum AI Agents (main category) | $1,500 / $750 | Category requirements | **Target** |
+| People's Choice | $500 / $300 / $200 | Community vote | **Target** |
+| Best AI-Native Build | $500 | `AI_USAGE.md` + form tick | **Target** |
+| **Quantum Campus** | **$500** | Every team member is a verified enrolled student | **Target: the team is eligible** |
+| **Regional Awards** | **5 × $200** | Region chosen on the form; only projects that win no other prize | **Fallback: entered** |
+| **Top-Quality Awards** | **7 × $250** | Highest-scored projects with no other prize, at least 70/100 from the jury | **Fallback: entered** |
 
 ---
 
@@ -54,17 +77,33 @@ Plus an Association Grant application (up to $10,000 in QOR) from January 2027.
 
 ## Quantum Campus ($500)
 
-Only if **every** team member is a currently enrolled student, verified by email. Confirm the team's status before submission. If eligible, tick it on the form; it costs nothing.
+**Status: target. The team is eligible** (confirmed by the team on 21 Nov 2026).
+
+**Rule:** every team member must be a currently enrolled student, verified by email.
+
+**Actions:**
+1. Each team member completes the student email verification on build.qorechain.io before 2 Dec.
+2. If anyone joins the team later, confirm they are also an enrolled student first, or the whole team loses eligibility.
+3. Tick Quantum Campus on the project form.
+4. Mention it in the README and video credits ("built by students"): it strengthens the story without costing anything.
 
 ---
 
-## Regional Awards (5 × $200) — fallback
+## Regional Awards (5 × $200) — fallback, entered
 
-Only for projects that win **no other prize**. Pick the team's region on the project form (Europe, the Americas, Middle East and Africa, Asia-Pacific, Türkiye).
+**Rule:** region chosen on the project form; **only projects that win no other prize**.
 
-## Top-Quality Awards (7 × $250) — fallback
+**Actions:**
+1. Choose the team's region on the project form (Europe, the Americas, Middle East and Africa, Asia-Pacific, Türkiye).
+2. Regional judging likely favours projects that are visible in that region's community: share the project in regional QoreChain and student channels during the People's Choice period.
 
-The seven highest-scored projects that win **no other prize**, with at least 70/100 from the jury. A polished, well-documented submission makes this a realistic floor even if we miss first place.
+## Top-Quality Awards (7 × $250) — fallback, entered
+
+**Rule:** the seven highest-scored projects that win **no other prize**, with **at least 70/100** from the jury.
+
+**Why we are well placed:** jurors score by hand, so a polished, honest, well-tested submission is what counts. The validation gates in `prompts/` (tests, testnet evidence, security review, fresh-clone check) are exactly what pushes a jury score above 70.
+
+**Actions:** nothing extra on the form; it follows from quality. Keep the 48-hour change-request window covered during judging (6–15 Dec).
 
 ---
 
