@@ -5,12 +5,17 @@ import { createQoreConnectUI, type QoreConnectUI } from '@qoreconnect/react'
 export const RELAYER_URL = process.env.NEXT_PUBLIC_RELAYER_URL ?? 'http://localhost:8787'
 export const GAS_TANK = process.env.NEXT_PUBLIC_GAS_TANK ?? 'demo-dapp'
 /** Contracts the QoreConnect app itself approves at onboarding (the demo dApp's contracts). */
-export const DEFAULT_CONTRACTS = (process.env.NEXT_PUBLIC_DEFAULT_CONTRACTS ?? '0xfa1643e3fbd2f58d8dbaf4ec025c2541062ffc74')
+export const DEFAULT_CONTRACTS = (process.env.NEXT_PUBLIC_DEFAULT_CONTRACTS ?? '0x42653b89eff2a993cf2767fedef783366f53aea4')
   .split(',')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean)
 /** Known contract names for readable lists. */
-export const CONTRACT_NAMES: Record<string, string> = { '0xfa1643e3fbd2f58d8dbaf4ec025c2541062ffc74': 'Demo Counter (Quantum Tip Jar)' }
+/** QoreTipJar on Diana (P10). */
+export const TIPJAR_ADDRESS = '0x42653b89eff2a993cf2767fedef783366f53aea4'
+export const CONTRACT_NAMES: Record<string, string> = {
+  [TIPJAR_ADDRESS]: 'Quantum Tip Jar',
+  '0xfa1643e3fbd2f58d8dbaf4ec025c2541062ffc74': 'Demo Counter (P01 spike)',
+}
 /** Prompt to save the recovery code once the balance passes this (uqor). */
 export const RECOVERY_PROMPT_UQOR = 1_000_000n
 

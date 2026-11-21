@@ -53,6 +53,8 @@ export interface QoreConnectUI {
   hooks: QoreConnectHooks
   /** Unlock the root (reuses a recently unlocked signer). Used by dashboards too. */
   unlock(reason?: string): Promise<RootSigner>
+  /** The root if it is unlocked right now (never prompts). */
+  peek(): RootSigner | undefined
   /** @internal */
   subscribe(fn: () => void): () => void
   /** @internal */
@@ -105,6 +107,7 @@ export function createQoreConnectUI(options: QoreConnectUIOptions & { extraHooks
   return {
     options,
     unlock,
+    peek: () => (signer && !signer.locked ? signer : undefined),
     hooks: {
       ...options.extraHooks,
       unlockRoot: () => unlock(),

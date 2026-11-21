@@ -21,6 +21,7 @@ import {
 } from '@qoreconnect/core'
 import { UnlockPrompt } from '@qoreconnect/react'
 import { ConnectButton } from '../../components/ConnectButton'
+import { AgentsPanel } from '../../components/AgentsPanel'
 import { CONTRACT_NAMES, DEFAULT_CONTRACTS, RECOVERY_PROMPT_UQOR, RELAYER_URL, qore } from '../../lib/qore'
 
 type Info = { qorAddress: string; evmAddress: string; kdf: string }
@@ -328,6 +329,8 @@ export default function AccountPage() {
           }
         />
       )}
+
+      <AgentsPanel net={net} busy={!!busy} rootAction={rootAction} unlocked={() => qore().ui.peek()} />
 
       <Card title="Q-Day kill switch" id="kill" tone="danger">
         {killed && classical.length === 0 ? (

@@ -2,7 +2,25 @@
   "name": "@qoreconnect/example-agent",
   "private": true,
   "type": "module",
-  "scripts": { "start": "tsx src/index.ts", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@qoreconnect/core": "workspace:*" },
-  "devDependencies": { "tsx": "^4.20.0", "typescript": "5.9.3" }
+  "scripts": {
+    "start": "tsx src/cli.ts serve",
+    "agent": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run test/unit",
+    "test:integration": "vitest run test/integration"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.6.0",
+    "@qoreconnect/core": "workspace:*",
+    "dotenv": "^17.4.2",
+    "viem": "2.58.2"
+  },
+  "devDependencies": {
+    "@qoreconnect/relayer": "workspace:*",
+    "@qorechain/sdk": "0.14.0",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "5.9.3",
+    "vitest": "^3.2.4"
+  }
 }
