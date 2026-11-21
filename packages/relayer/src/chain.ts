@@ -1,5 +1,5 @@
-import { bank, deriveUnifiedAccount, type UnifiedAccount } from '@qorechain/sdk'
-import { RestBroadcaster, sendTx, type QoreNetwork } from '@qoreconnect/core'
+import { bank, buildRegisterPqcKeyMsg, deriveUnifiedAccount, signProofOfPossession, type UnifiedAccount } from '@qorechain/sdk'
+import { QoreClient, RestBroadcaster, sendTx, type QoreNetwork } from '@qoreconnect/core'
 import type { FundsSender } from './sponsor'
 
 /** Serialises transactions from one account so sequence numbers never race. */
@@ -32,4 +32,23 @@ export class ChainFundsSender implements FundsSender {
       return r.transactionHash
     })
   }
+}
+
+/**
+ * Operator accounts sign hybrid envelopes, so they need a registered ML-DSA-87 key, like any root (P01).
+ * Registers it with the classical bootstrap tx when missing. Idempotent; call at startup.
+ */
+export async function ensurePqcRegistered(net: QoreNetwork, account: UnifiedAccount): Promise<{ registered: true; txHash?: string }> {
+  const client = new QoreClient(net)
+  if ((await client.getPqcKey(account.cosmos, { fresh: true })).registered) return { registered: true }
+  const proofOfPossession = signProofOfPossession({ chainId: net.chainId, account: account.cosmos, algorithmId: 1, keypair: account.pqc })
+  const pub = account.publicKey.startsWith('0x') ? account.publicKey.slice(2) : account.publicKey
+  const ecdsaPubkey = Uint8Array.from(pub.match(/.{1,2}/g) ?? [], (b) => parseInt(b, 16))
+  const msg = buildRegisterPqcKeyMsg(account.cosmos, { pqcKeypair: account.pqc, ecdsaPubkey, keyType: 'hybrid', proofOfPossession })
+  const r = await sendTx(net, account, [msg], new RestBroadcaster(net), { mode: 'classical' })
+  for (let i = 0; i < 30; i++) {
+    if ((await client.getPqcKey(account.cosmos, { fresh: true })).registered) return { registered: true, txHash: r.transactionHash }
+    await new Promise((res) => setTimeout(res, 1_000))
+  }
+  throw new Error(`ML-DSA registration for ${account.cosmos} not confirmed (tx ${r.transactionHash})`)
 }

@@ -64,12 +64,17 @@ export class QoreConnectError extends Error {
  */
 export function classifyChainRefusal(text: string | undefined, chainCode?: number): QoreConnectErrorCode {
   const t = (text ?? '').toLowerCase()
-  if (t.includes('spending limit exceeded') || t.includes('limit') && t.includes('exceeded') || chainCode === 5) return 'LIMIT_EXCEEDED'
+  // Text first: execution-failure reasons carry no code.
+  if (t.includes('spending limit exceeded') || /limit \d+\w* exceeded/.test(t)) return 'LIMIT_EXCEEDED'
   if (t.includes('unbound or revoked') || t.includes('revoked')) return 'REVOKED'
-  if (t.includes('expired') || chainCode === 6) return 'EXPIRED'
-  if (t.includes('allowed_evm_calls') || t.includes('not permitted') || chainCode === 10) return 'NOT_APPROVED'
-  if (t.includes('nonce') || t.includes('replay') || chainCode === 11) return 'NONCE'
-  if (t.includes('disabled') || chainCode === 9) return 'MODULE_DISABLED'
-  if (chainCode === 8) return 'NO_RULE'
+  if (t.includes('expired')) return 'EXPIRED'
+  if (t.includes('allowed_evm_calls') || t.includes('not permitted')) return 'NOT_APPROVED'
+  if (t.includes('authenticator sequence') || t.includes('wrong nonce') || t.includes('replay')) return 'NONCE'
+  if (t.includes('abstractaccount') && t.includes('disabled')) return 'MODULE_DISABLED'
+  // Codes only within the abstractaccount codespace (callers pass them only for authenticator refusals).
+  if (chainCode === 5) return 'LIMIT_EXCEEDED'
+  if (chainCode === 6) return 'EXPIRED'
+  if (chainCode === 10) return 'NOT_APPROVED'
+  if (chainCode === 11) return 'NONCE'
   return 'TX_FAILED'
 }

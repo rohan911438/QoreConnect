@@ -1,7 +1,21 @@
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 
+/** fetch with up to 3 retries on transient network errors (not on HTTP errors). */
 function f(fetchImpl?: FetchLike): FetchLike {
-  return fetchImpl ?? ((i, init) => globalThis.fetch(i, init))
+  const base: FetchLike = fetchImpl ?? ((i, init) => globalThis.fetch(i, init))
+  return async (input, init) => {
+    let last: unknown
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        return await base(input, init)
+      } catch (e) {
+        last = e
+        if (!/fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|UND_ERR|socket|network/i.test(String((e as any)?.cause?.code ?? '') + String((e as Error)?.message ?? e))) throw e
+        await new Promise((r) => setTimeout(r, 300 * 2 ** attempt))
+      }
+    }
+    throw last
+  }
 }
 
 export class HttpError extends Error {

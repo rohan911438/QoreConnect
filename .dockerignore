@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.next
+**/.env
+**/.env.*
+!.env.example
+spike
+contracts/lib
+contracts/out
+**/data
+**/*.db*
+.git

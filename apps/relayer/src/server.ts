@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { serve } from '@hono/node-server'
 import { DIANA, QoreClient, type QoreNetwork } from '@qoreconnect/core'
-import { ChainFundsSender, DEFAULT_SPONSOR, RelayerStore, SponsorService, createRelayerApp, operatorAccount } from '@qoreconnect/relayer'
+import { ChainFundsSender, ChainRelay, ensurePqcRegistered, DEFAULT_SPONSOR, RelayService, RelayerStore, SponsorService, createRelayerApp, operatorAccount } from '@qoreconnect/relayer'
 
 // Load the repo-root .env first, then a local one (local wins).
 config({ path: resolve(import.meta.dirname, '../../../.env') })
@@ -18,14 +18,26 @@ const net: QoreNetwork = {
 
 const sponsorMnemonic = process.env.SPONSOR_MNEMONIC
 const relayerMnemonic = process.env.RELAYER_MNEMONIC ?? sponsorMnemonic
-if (!sponsorMnemonic) {
-  console.error('SPONSOR_MNEMONIC is not set. See .env.example.')
+const missing = ['SPONSOR_MNEMONIC', 'RELAYER_MNEMONIC', 'ADMIN_TOKEN'].filter((k) => !process.env[k])
+if (missing.length) {
+  console.error(`Missing required secrets: ${missing.join(', ')}. See .env.example.`)
+  process.exit(1)
+}
+if (process.env.SPONSOR_MNEMONIC === process.env.RELAYER_MNEMONIC && (process.env.SPONSOR_INDEX ?? '0') === (process.env.RELAYER_INDEX ?? '0')) {
+  console.error('Sponsor and relayer must be different accounts (set RELAYER_INDEX).')
   process.exit(1)
 }
 
-// Separate accounts by default: relayer = index 0 of RELAYER_MNEMONIC, sponsor = index of SPONSOR_INDEX (default 0).
-const sponsorAccount = await operatorAccount(sponsorMnemonic, Number(process.env.SPONSOR_INDEX ?? 0))
+// Sponsor and relayer are separate accounts (SPONSOR_INDEX / RELAYER_INDEX on their mnemonics).
+const sponsorAccount = await operatorAccount(sponsorMnemonic!, Number(process.env.SPONSOR_INDEX ?? 0))
 const relayerAccount = await operatorAccount(relayerMnemonic!, Number(process.env.RELAYER_INDEX ?? 0))
+
+// Both operator accounts sign hybrid transactions, so their ML-DSA-87 keys must be registered.
+// SKIP_KEY_BOOTSTRAP=1 is only for container smoke tests with throwaway, unfunded keys.
+for (const a of process.env.SKIP_KEY_BOOTSTRAP === '1' ? [] : [sponsorAccount, relayerAccount]) {
+  const r = await ensurePqcRegistered(net, a)
+  if (r.txHash) console.log(`registered ML-DSA key for ${a.cosmos}: ${r.txHash}`)
+}
 
 const dbPath = resolve(process.env.RELAYER_DB ?? './data/relayer.db')
 mkdirSync(dirname(dbPath), { recursive: true })
@@ -44,10 +56,14 @@ const sponsor = new SponsorService(
   async (root) => (await client.getPqcKey(root)).registered,
 )
 
+const relay = new RelayService(net, store, new ChainRelay(net, relayerAccount))
+
 const app = createRelayerApp({
   net,
   store,
   sponsor,
+  relay,
+  adminToken: process.env.ADMIN_TOKEN,
   version: '0.1.0',
   accounts: { relayer: relayerAccount.cosmos, sponsor: sponsorAccount.cosmos },
   corsOrigins: process.env.CORS_ORIGINS?.split(',').map((s) => s.trim()),

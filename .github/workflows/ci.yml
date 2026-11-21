@@ -30,3 +30,16 @@ jobs:
         with: { fetch-depth: 0 }
       - uses: gitleaks/gitleaks-action@v2
         env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+  relayer-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -f apps/relayer/Dockerfile -t qoreconnect-relayer .
+      - name: Run and check /health (throwaway unfunded keys, no transactions)
+        run: |
+          M="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          docker run -d --name relayer -p 8787:8787 -e SPONSOR_MNEMONIC="$M" -e RELAYER_MNEMONIC="$M" -e RELAYER_INDEX=1 \
+            -e ADMIN_TOKEN=ci-only-token -e SKIP_KEY_BOOTSTRAP=1 qoreconnect-relayer
+          for i in $(seq 1 30); do curl -fsS localhost:8787/health && exit 0; sleep 2; done
+          docker logs relayer; exit 1

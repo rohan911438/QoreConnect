@@ -1,5 +1,15 @@
 import { DatabaseSync } from 'node:sqlite'
 
+export interface Tank {
+  id: string
+  name: string
+  owner: string
+  balanceUqor: bigint
+  perUserDailyCapUqor: bigint
+  allowedContracts?: string[]
+  paused: boolean
+}
+
 /**
  * Relayer persistence on Node's built-in SQLite (node:sqlite, Node >= 22.5).
  * Deviation from the plan (Drizzle): no native module to build on Windows or in the container; same tables.
@@ -97,6 +107,69 @@ export class RelayerStore {
   sponsoredToday(now = Date.now()): bigint {
     const rows = this.db.prepare('SELECT amount_uqor FROM sponsorships WHERE created_at >= ?').all(now - 86_400_000) as { amount_uqor: string }[]
     return rows.reduce((a, r) => a + BigInt(r.amount_uqor), 0n)
+  }
+
+  // ---- gas tanks ----
+
+  createTank(t: { id: string; name: string; owner: string; balanceUqor: bigint; perUserDailyCapUqor: bigint; allowedContracts?: string[] }, now = Date.now()): Tank {
+    this.db
+      .prepare('INSERT INTO tanks (id, name, owner, balance_uqor, per_user_daily_cap_uqor, allowed_contracts, paused, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)')
+      .run(t.id, t.name, t.owner, t.balanceUqor.toString(), t.perUserDailyCapUqor.toString(), t.allowedContracts?.length ? JSON.stringify(t.allowedContracts.map((c) => c.toLowerCase())) : null, now)
+    return this.getTank(t.id)!
+  }
+
+  getTank(id: string): Tank | undefined {
+    const r = this.db.prepare('SELECT * FROM tanks WHERE id = ?').get(id) as any
+    if (!r) return undefined
+    return {
+      id: r.id,
+      name: r.name,
+      owner: r.owner,
+      balanceUqor: BigInt(r.balance_uqor),
+      perUserDailyCapUqor: BigInt(r.per_user_daily_cap_uqor),
+      allowedContracts: r.allowed_contracts ? JSON.parse(r.allowed_contracts) : undefined,
+      paused: !!r.paused,
+    }
+  }
+
+  updateTank(id: string, patch: { balanceUqor?: bigint; perUserDailyCapUqor?: bigint; paused?: boolean }) {
+    const t = this.getTank(id)
+    if (!t) return undefined
+    this.db
+      .prepare('UPDATE tanks SET balance_uqor = ?, per_user_daily_cap_uqor = ?, paused = ? WHERE id = ?')
+      .run((patch.balanceUqor ?? t.balanceUqor).toString(), (patch.perUserDailyCapUqor ?? t.perUserDailyCapUqor).toString(), (patch.paused ?? t.paused) ? 1 : 0, id)
+    return this.getTank(id)
+  }
+
+  /** Debit a tank (never below zero; the balance is an accounting budget, not on-chain funds). */
+  debitTank(id: string, feeUqor: bigint) {
+    const t = this.getTank(id)
+    if (!t) return
+    const next = t.balanceUqor > feeUqor ? t.balanceUqor - feeUqor : 0n
+    this.db.prepare('UPDATE tanks SET balance_uqor = ? WHERE id = ?').run(next.toString(), id)
+  }
+
+  /** Fees this account consumed from this tank in the last 24 h. */
+  accountSpentToday(tankId: string, account: string, now = Date.now()): bigint {
+    const rows = this.db
+      .prepare('SELECT fee_uqor FROM relays WHERE tank_id = ? AND account = ? AND created_at >= ? AND fee_uqor IS NOT NULL')
+      .all(tankId, account, now - 86_400_000) as { fee_uqor: string }[]
+    return rows.reduce((a, r) => a + BigInt(r.fee_uqor), 0n)
+  }
+
+  tankSpentToday(tankId: string, now = Date.now()): bigint {
+    const rows = this.db.prepare('SELECT fee_uqor FROM relays WHERE tank_id = ? AND created_at >= ? AND fee_uqor IS NOT NULL').all(tankId, now - 86_400_000) as { fee_uqor: string }[]
+    return rows.reduce((a, r) => a + BigInt(r.fee_uqor), 0n)
+  }
+
+  recordRelay(r: { tankId: string; account: string; signer: string; target?: string; txHash?: string; success?: boolean; code?: number; error?: string; feeUqor?: bigint; ip?: string }, now = Date.now()) {
+    this.db
+      .prepare('INSERT INTO relays (tank_id, account, signer, target, tx_hash, success, code, error, fee_uqor, ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(r.tankId, r.account, r.signer, r.target ?? null, r.txHash ?? null, r.success === undefined ? null : r.success ? 1 : 0, r.code ?? null, r.error ?? null, r.feeUqor?.toString() ?? null, r.ip ?? null, now)
+  }
+
+  getRelay(txHash: string): any {
+    return this.db.prepare('SELECT tank_id, account, signer, target, tx_hash, success, code, error, fee_uqor, created_at FROM relays WHERE tx_hash = ?').get(txHash.toUpperCase())
   }
 
   recordMeterEvent(kind: string, account?: string, txHash?: string, now = Date.now()) {

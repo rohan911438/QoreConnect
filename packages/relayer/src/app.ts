@@ -3,11 +3,16 @@ import { cors } from 'hono/cors'
 import { QoreClient, type QoreNetwork } from '@qoreconnect/core'
 import type { RelayerStore } from './store'
 import type { SponsorService } from './sponsor'
+import type { RelayService } from './relay'
+import { timingSafeEqual } from 'node:crypto'
 
 export interface RelayerDeps {
   net: QoreNetwork
   store: RelayerStore
   sponsor: SponsorService
+  relay?: RelayService
+  /** Bearer token for admin routes (POST /v1/tanks). Admin routes are disabled without it. */
+  adminToken?: string
   version?: string
   accounts?: { relayer?: string; sponsor?: string }
   /** Resolve the caller IP. Behind a proxy, trust only the platform's header. */
@@ -43,6 +48,59 @@ export function createRelayerApp(d: RelayerDeps) {
     const out = await d.sponsor.sponsor(body, ipOf((n) => c.req.header(n)))
     if (out.ok) return c.json({ funded: true, amount: out.amount, txHash: out.txHash })
     return c.json({ funded: false, error: out.error }, out.status)
+  })
+
+  app.post('/v1/relay', async (c) => {
+    if (!d.relay) return c.json({ ok: false, error: 'relay disabled' }, 503)
+    const body = await c.req.json().catch(() => ({}))
+    const out = await d.relay.relay(body, ipOf((n) => c.req.header(n)))
+    return c.json(out.body, out.status as any)
+  })
+
+  app.get('/v1/relay/:txHash', (c) => {
+    const r = d.store.getRelay(c.req.param('txHash'))
+    if (!r) return c.json({ found: false }, 404)
+    return c.json({ found: true, txHash: r.tx_hash, success: r.success === 1, code: r.code, error: r.error, feeUqor: r.fee_uqor, tankId: r.tank_id, account: r.account, target: r.target, createdAt: r.created_at })
+  })
+
+  app.get('/v1/tanks/:id', (c) => {
+    const t = d.store.getTank(c.req.param('id'))
+    if (!t) return c.json({ found: false }, 404)
+    return c.json({
+      id: t.id,
+      name: t.name,
+      owner: t.owner,
+      balance: t.balanceUqor.toString(),
+      dailySpent: d.store.tankSpentToday(t.id).toString(),
+      perUserDailyCap: t.perUserDailyCapUqor.toString(),
+      allowedContracts: t.allowedContracts ?? null,
+      paused: t.paused,
+    })
+  })
+
+  const isAdmin = (h: string | undefined) => {
+    if (!d.adminToken || !h?.startsWith('Bearer ')) return false
+    const a = Buffer.from(h.slice(7))
+    const b = Buffer.from(d.adminToken)
+    return a.length === b.length && timingSafeEqual(a, b)
+  }
+
+  app.post('/v1/tanks', async (c) => {
+    if (!isAdmin(c.req.header('authorization'))) return c.json({ error: 'unauthorized' }, 401)
+    const b: any = await c.req.json().catch(() => ({}))
+    if (typeof b.id !== 'string' || !/^[a-z0-9-]{1,64}$/.test(b.id) || typeof b.name !== 'string' || typeof b.owner !== 'string') {
+      return c.json({ error: 'id (a-z0-9-), name and owner are required' }, 400)
+    }
+    if (d.store.getTank(b.id)) return c.json({ error: 'tank exists' }, 409)
+    const t = d.store.createTank({
+      id: b.id,
+      name: b.name,
+      owner: b.owner,
+      balanceUqor: BigInt(b.balanceUqor ?? 50_000_000),
+      perUserDailyCapUqor: BigInt(b.perUserDailyCap ?? 2_000_000),
+      allowedContracts: Array.isArray(b.allowedContracts) ? b.allowedContracts : undefined,
+    })
+    return c.json({ created: true, id: t.id, balance: t.balanceUqor.toString(), perUserDailyCap: t.perUserDailyCapUqor.toString() }, 201)
   })
 
   return app

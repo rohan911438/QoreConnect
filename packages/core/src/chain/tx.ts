@@ -2,7 +2,7 @@ import { EthNativeSigner, type UnifiedAccount } from '@qorechain/sdk'
 import type { EncodeObject } from '@cosmjs/proto-signing'
 import type { QoreNetwork } from '../config'
 import { QoreConnectError, classifyChainRefusal } from '../errors'
-import { getJson, postJson, type FetchLike } from './http'
+import { getJson, HttpError, postJson, type FetchLike } from './http'
 
 /** Result of an included transaction, in the shape the SDK's execution decoders accept. */
 export interface TxResult {
@@ -42,7 +42,8 @@ const fromB64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0))
 /** Account number and sequence over REST. Throws VAULT_NOT_FOUND-like error when the account does not exist yet. */
 export async function accountSequence(net: QoreNetwork, address: string, fetchImpl?: FetchLike) {
   const j = await getJson<any>(`${net.rest}/cosmos/auth/v1beta1/accounts/${address}`, fetchImpl).catch((e) => {
-    throw new QoreConnectError('TX_FAILED', { message: `Account ${address} does not exist on chain yet.`, detail: String(e) })
+    if (e instanceof HttpError && e.status === 404) throw new QoreConnectError('TX_FAILED', { message: `Account ${address} does not exist on chain yet.`, detail: e.body })
+    throw new QoreConnectError('RELAYER_UNAVAILABLE', { message: 'QoreChain REST is unreachable right now.', detail: String(e) })
   })
   const a = j.account?.base_account ?? j.account
   return { accountNumber: BigInt(a.account_number ?? 0), sequence: BigInt(a.sequence ?? 0) }
