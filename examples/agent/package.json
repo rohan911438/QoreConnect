@@ -1,0 +1,8 @@
+{
+  "name": "@qoreconnect/example-agent",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "tsx src/index.ts", "typecheck": "tsc --noEmit" },
+  "dependencies": { "@qoreconnect/core": "workspace:*" },
+  "devDependencies": { "tsx": "^4.20.0", "typescript": "5.9.3" }
+}

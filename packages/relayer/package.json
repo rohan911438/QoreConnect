@@ -1,0 +1,35 @@
+{
+  "name": "@qoreconnect/relayer",
+  "version": "0.0.0",
+  "description": "QoreConnect relayer: submits MetaMask-signed MsgExecuteEVM on QoreChain, sponsors onboarding, gas tanks, Migration Meter.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --dir test/integration --passWithNoTests"
+  },
+  "dependencies": {
+    "@qoreconnect/core": "workspace:*",
+    "hono": "^4.13.19",
+    "zod": "^4.6.7",
+    "@qorechain/sdk": "0.14.0",
+    "viem": "2.58.2"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

@@ -37,3 +37,11 @@ Thumbs.db
 # spike / local key material (never commit)
 .*secret*
 **/results/.*
+
+# foundry deps (installed by CI / setup)
+contracts/lib/
+
+# relayer local data (sqlite + WAL)
+apps/relayer/data/
+*.db-wal
+*.db-shm

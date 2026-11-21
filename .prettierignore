@@ -1,0 +1,9 @@
+**/dist
+**/.next
+pnpm-lock.yaml
+spike
+contracts/lib
+idea
+tracks
+architecture
+prompts

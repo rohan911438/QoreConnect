@@ -1,0 +1,14 @@
+{
+  "name": "@qoreconnect/web",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "next dev -p 3000", "build": "next build", "start": "next start", "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@qoreconnect/core": "workspace:*",
+    "@qoreconnect/react": "workspace:*",
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": { "@tailwindcss/postcss": "^4.3.5", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "tailwindcss": "^4.3.5", "typescript": "5.9.3" }
+}

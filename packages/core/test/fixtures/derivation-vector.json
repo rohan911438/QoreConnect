@@ -1,0 +1,7 @@
+{
+  "mnemonic": "BIP-39 test vector (abandon x23 art)",
+  "qorAddress": "qor17fuv7k0c9mw0suwkxreganyq2me9c8xmdl9s7p",
+  "evmAddress": "0xF278cF59F82eDcf871d630F28EcC8056f25C1cdb",
+  "pqcPublicKeyPrefix": "fec01c60878388815f013f430e19d61036f28c62fa6fa19bbe033552784d620e",
+  "pqcPublicKeyLength": 2592
+}

@@ -5,8 +5,8 @@ Update this file after every validation gate. One row per attempt.
 | Prompt | Date | Result | Evidence | Deviations / notes |
 |---|---|---|---|---|
 | P01 | 2026-11-21 | **PASS (GO)** | Q1–Q8, Q11, Q12 pass on Diana; tx hashes in spike/RESULTS.md | Rules are account-wide, so agents use sub-accounts; relayer must pre-check (refusals cost fees); envelope gas ≥ signed gas + 450k; no EVM window needed. Q10 (PRF) and Q13 (category) pending manual. |
-| P02 | | not started | | |
-| P03 | | not started | | |
+| P02 | 2026-11-21 | **PASS** | install/build/lint/typecheck/tests green; forge test 2/2; relayer /health live on Diana (height 10492184); web / and /dev/vault 200 | pnpm 11 release-age policy: pinned viem 2.58.2, react-query 5.108.0; wagmi 2.19.5 + TS 5.9.3 kept for RainbowKit/QoreX compatibility; Foundry 1.5.1 via release zip on Windows. G7/G8 verified in CI after push. |
+| P03 | 2026-11-21 | **PASS (auto gates)** | 12 core tests: password + passkey(fake PRF) round-trip, wrong password, AAD tamper, IndexedDB blob has no mnemonic word pair, test vector qor17fuv7k…l9s7p / 0xF278…1cdb matches SDK | G4 (Windows Hello passkey) and G5 (forced password) are manual on /dev/vault. Vault binds addresses into AES-GCM AAD. |
 | P04 | | not started | | |
 | P05 | | not started | | |
 | P06 | | not started | | |

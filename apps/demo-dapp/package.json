@@ -1,0 +1,15 @@
+{
+  "name": "@qoreconnect/demo-dapp",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "vite --port 5173", "build": "tsc --noEmit && vite build", "typecheck": "tsc --noEmit", "preview": "vite preview" },
+  "dependencies": {
+    "@qoreconnect/wagmi": "workspace:*",
+    "@tanstack/react-query": "5.108.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "viem": "2.58.2",
+    "wagmi": "2.19.5"
+  },
+  "devDependencies": { "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "@vitejs/plugin-react": "^5.0.0", "typescript": "5.9.3", "vite": "^7.0.0" }
+}

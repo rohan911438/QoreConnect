@@ -1,0 +1,17 @@
+{
+  "name": "@qoreconnect/react",
+  "version": "0.0.0",
+  "description": "React UI for QoreConnect: onboarding, signing preview, approvals, honesty labels.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.cjs" } },
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": { "build": "tsup", "typecheck": "tsc --noEmit", "test": "vitest run --passWithNoTests", "test:integration": "vitest run --dir test/integration --passWithNoTests" },
+  "dependencies": { "@qoreconnect/core": "workspace:*" },
+  "peerDependencies": { "react": ">=18", "react-dom": ">=18" },
+  "devDependencies": { "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "react": "19.3.1", "react-dom": "19.3.1", "happy-dom": "^21.0.4", "@testing-library/react": "^16.3.0" }
+}

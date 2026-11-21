@@ -1,0 +1,17 @@
+{
+  "name": "@qoreconnect/wagmi",
+  "version": "0.0.0",
+  "description": "wagmi connector for QoreConnect: MetaMask users on QoreChain with a post-quantum root key.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.cjs" } },
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": { "build": "tsup", "typecheck": "tsc --noEmit", "test": "vitest run --passWithNoTests", "test:integration": "vitest run --dir test/integration --passWithNoTests" },
+  "dependencies": { "@qoreconnect/core": "workspace:*" },
+  "peerDependencies": { "@wagmi/core": "^2.22.0", "viem": "^2.0.0" },
+  "devDependencies": { "@wagmi/core": "2.22.1", "viem": "2.58.2" }
+}
