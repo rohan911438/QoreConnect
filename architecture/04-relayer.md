@@ -27,6 +27,11 @@ All responses are JSON. Errors use the chain's codes where possible (see `02-acc
 
 ## Relay pipeline
 
+> **P01 findings that shape this pipeline:**
+> 1. A refused execution is still a code-0 transaction **with a fee paid by the relayer** (0.0975 QOR measured). So step 4 (local pre-check of allow-list, caps, expiry, nonce, plus `eth_call` simulation) is **mandatory**, not optional.
+> 2. The envelope's gas must cover the signed `gasLimit`, or the chain refuses with code 10 ("provisions X gas for the call, less than the signed gas_limit"). Use `gas = max(simulated × 1.3, signedGasLimit + 450,000)`.
+> 3. Measured relay cost: 0.066–0.081 QOR per execution at 0.15 uqor/gas.
+
 1. **Parse and validate** the message shape (zod schema). Reject anything other than `MsgExecuteEVM` (and later `MsgExecuteCosmos` if C2 is built).
 2. **Tank policy:** tank exists, has budget; per-user daily cap not exceeded; rate limit per user and per IP.
 3. **Freshness:** `fetchAuthNonce` for (account, pubkey) equals the message nonce; otherwise return code 11 early, without spending gas.

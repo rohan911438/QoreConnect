@@ -1,0 +1,18 @@
+{
+  "rules": [
+    {
+      "id": "qoreconnect",
+      "dailyLimit": "5000000",
+      "perTxLimit": "1000000",
+      "allowedDenoms": [
+        "uqor"
+      ],
+      "enabled": true,
+      "allowedEvmCalls": [
+        "0xfa1643e3fbd2f58d8dbaf4ec025c2541062ffc74"
+      ],
+      "denomLimits": []
+    }
+  ],
+  "authenticatorRules": []
+}

@@ -33,3 +33,7 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# spike / local key material (never commit)
+.*secret*
+**/results/.*

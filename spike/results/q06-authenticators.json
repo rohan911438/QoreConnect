@@ -1,0 +1,14 @@
+[
+  {
+    "scheme": "secp256k1",
+    "pubkeyHex": "974944048dec3f8ff1ba6bb076724d86c085d69b",
+    "permissions": [
+      "evm"
+    ],
+    "expiryUnix": "1795345711",
+    "label": "metamask",
+    "createdAtUnix": "1795259314",
+    "revoked": false,
+    "hasSpendRule": false
+  }
+]

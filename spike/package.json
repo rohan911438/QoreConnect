@@ -1,0 +1,24 @@
+{
+  "name": "qoreconnect-spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "q": "tsx"
+  },
+  "dependencies": {
+    "@cosmjs/stargate": "0.39.0",
+    "@qorechain/evm": "0.14.0",
+    "@qorechain/pqc": "0.2.3",
+    "@qorechain/qoresign": "0.2.0",
+    "@qorechain/sdk": "0.14.0",
+    "@qorechain/wallet-adapter": "0.6.0",
+    "dotenv": "^18.0.10",
+    "solc": "0.8.28",
+    "viem": "^2.58.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,5 +1,12 @@
 # 02 — Account model
 
+> **Updated after P01 (21 Nov 2026).** Verified on Diana:
+> - Spending rules are **account-wide**: the first enabled rule bounds every linked key. There is no per-key rule message in SDK 0.14.0. So **AI agents get their own agent sub-account** (same root seed, HD index ≥ 1), with its own budget and rules, instead of sharing the main account's rule.
+> - Authenticator executions need **no EVM window**, and `msg.sender` inside the EVM is the **root's 0x address**.
+> - `["evm"]` permission is enough for contract calls.
+> - The root is an **eth-native unified account** (`deriveUnifiedAccount`, path `m/44'/60'/0'/0/i`), signed with `EthNativeSigner`. This matches QoreX's derivation.
+> - EVM `value` is in wei (18 decimals); limits are in uqor (6 decimals).
+
 ## Keys
 
 | Key | Algorithm | Derived from | Held by | Used for |

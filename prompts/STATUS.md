@@ -4,7 +4,7 @@ Update this file after every validation gate. One row per attempt.
 
 | Prompt | Date | Result | Evidence | Deviations / notes |
 |---|---|---|---|---|
-| P01 | | not started | | |
+| P01 | 2026-11-21 | **PASS (GO)** | Q1–Q8, Q11, Q12 pass on Diana; tx hashes in spike/RESULTS.md | Rules are account-wide, so agents use sub-accounts; relayer must pre-check (refusals cost fees); envelope gas ≥ signed gas + 450k; no EVM window needed. Q10 (PRF) and Q13 (category) pending manual. |
 | P02 | | not started | | |
 | P03 | | not started | | |
 | P04 | | not started | | |
@@ -25,11 +25,11 @@ Update this file after every validation gate. One row per attempt.
 
 | Role | qor1 address | 0x address | Funded on |
 |---|---|---|---|
-| Operator 1 (faucet) | | | |
+| Operator / sponsor / relayer | qor1wpae9a38v7vlj2xvun2cw0669w4ls568zar4w8 | 0x707B92f6276799f928CCe4D5873f5A2babF85347 | ~99.8 QOR on 21 Nov |
 | Sponsor | | | |
 | Relayer | | | |
-| Demo user root | | | |
-| Demo MetaMask | | | |
+| Spike user root | qor10z0spuhkwp0dzr0sx4rhl3ed83z8pe8yk9848s | 0x789F00F2F6705ed10DF035477fc72d3C4470E4E4 | sponsored 3 QOR, 21 Nov |
+| Spike stand-in MetaMask | — | 0x974944048DeC3f8Ff1bA6bB076724D86c085d69B | — |
 | Agent | | | |
 
 (Addresses only. Never write mnemonics or private keys here.)
@@ -38,4 +38,5 @@ Update this file after every validation gate. One row per attempt.
 
 | Contract | Address | Tx hash |
 |---|---|---|
-| | | |
+| SpikeCounter (allowed) | 0xfa1643e3fbd2f58d8dbaf4ec025c2541062ffc74 | 0xe3e232b7adeff08abb48f6dc0930f76c1da3519bd9dc26dcf243c174176a892d |
+| SpikeCounter (other) | 0x5017fbbc1de44e698d1778630bce63741c1d0005 | 0xe73dba8561208d09250160eb027885e9feb91bcea96339303026951e7dd6c85e |

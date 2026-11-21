@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Passkey PRF test</title>
+<style>body{font:16px system-ui;margin:2rem;max-width:40rem;background:#0b0d10;color:#e8eaed}button{font:inherit;padding:.6rem 1rem;border-radius:.5rem;border:0;background:#4f8cff;color:#fff;cursor:pointer}pre{background:#161a20;padding:1rem;border-radius:.5rem;white-space:pre-wrap}</style></head>
+<body>
+<h1>Passkey PRF support test (QoreConnect P01 · Q10)</h1>
+<p>Creates a throwaway passkey on this device and checks whether the WebAuthn <code>prf</code> extension returns key material. Nothing leaves this page.</p>
+<button id="go">Run test</button>
+<pre id="out">Not run yet.</pre>
+<script>
+const out = document.getElementById('out')
+const show = (o) => out.textContent = JSON.stringify(o, null, 2)
+document.getElementById('go').onclick = async () => {
+  try {
+    const salt = crypto.getRandomValues(new Uint8Array(32))
+    const cred = await navigator.credentials.create({ publicKey: {
+      rp: { name: 'QoreConnect PRF test', id: location.hostname || 'localhost' },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'prf-test', displayName: 'PRF test' },
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
+      extensions: { prf: { eval: { first: salt } } },
+    }})
+    const ext = cred.getClientExtensionResults()
+    let assertion = null
+    if (ext.prf?.enabled && !ext.prf?.results?.first) {
+      const a = await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ type: 'public-key', id: cred.rawId }], userVerification: 'required', extensions: { prf: { eval: { first: salt } } } } })
+      assertion = a.getClientExtensionResults()
+    }
+    const first = ext.prf?.results?.first || assertion?.prf?.results?.first
+    show({ userAgent: navigator.userAgent, prfEnabled: !!ext.prf?.enabled, prfOutputBytes: first ? first.byteLength : 0, verdict: first ? 'PASS: passkey PRF works here' : 'FAIL: use password fallback' })
+  } catch (e) { show({ error: String(e), verdict: 'FAIL: use password fallback' }) }
+}
+</script>
+</body></html>

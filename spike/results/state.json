@@ -1,0 +1,146 @@
+{
+  "counterAllowed": "0xfa1643e3fbd2f58d8dbaf4ec025c2541062ffc74",
+  "counterOther": "0x5017fbbc1de44e698d1778630bce63741c1d0005",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "count",
+          "type": "uint256"
+        }
+      ],
+      "name": "Incremented",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "count",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "increment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "lastSender",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "tip",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "tips",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "root": {
+    "cosmos": "qor10z0spuhkwp0dzr0sx4rhl3ed83z8pe8yk9848s",
+    "evm": "0x789F00F2F6705ed10DF035477fc72d3C4470E4E4"
+  },
+  "onboard": {
+    "sponsorTx": "17C19D719DB074183CBCC2F4E33EAC08B9F667107AD16239C5A28E64C4CFDEB7",
+    "registerTx": "A4A820DDBCAA23E64B67A40E8755C2EBC69CC637CAA4EA61563DB736A5C3F839",
+    "registerGasUsed": "299281",
+    "registerFee": "59120",
+    "ms": 23834
+  },
+  "metamask": "0x974944048DeC3f8Ff1bA6bB076724D86c085d69B",
+  "link": {
+    "tx": "08EAAB70FF9AD7B5AE9875A8F58522A1A98EFF97CDF66794FED1474932ED3C07",
+    "gasUsed": "226107",
+    "fee": "44887"
+  },
+  "execute": {
+    "tx": "ACA41F09AE923018D5B882254B4788C4F93DD77E3C999E6D11DF295CE51B80F1",
+    "gasUsed": "332968",
+    "fee": "65701",
+    "success": true,
+    "before": "0",
+    "after": "1",
+    "lastSender": "0x789F00F2F6705ed10DF035477fc72d3C4470E4E4",
+    "digestVersion": "v2"
+  },
+  "negative": {
+    "Q7a call to non-allowlisted contract": {
+      "code": 0,
+      "tx": "187A08A35DDC76B72661C8B848D613E9811547E83EDF23E501E60A4E7D8B3E90",
+      "success": false,
+      "reason": "a linked key with a spending rule may call 0x5017FbBc1De44e698d1778630Bce63741C1D0005 with data only if the rule lists the call in allowed_evm_calls (or lists the token as \"erc20/0x5017FbBc1De44e698d1778630Bce63741C1D0005\" for a token transfer or approval): authenticator not permitted for this action",
+      "asserted": "AuthenticatorExecutionError: authenticator execution failed although the transaction succeeded (tx 187A08A35DDC76B72661C8B848D613E9811547E83EDF23E501E60A4E7D8B3E90): message 0 (evm): a linked key with a spending rule may call 0x5"
+    },
+    "Q7c tip over perTxLimit (1.5 QOR)": {
+      "code": 0,
+      "tx": "2C84F5492A79EC62D8B5690B2A42273DDAD1DB80DA2F62281E57567C66F00D92",
+      "success": false,
+      "reason": "per-tx limit 1000000uqor exceeded (attempted 1500000): spending limit exceeded",
+      "asserted": "AuthenticatorExecutionError: authenticator execution failed although the transaction succeeded (tx 2C84F5492A79EC62D8B5690B2A42273DDAD1DB80DA2F62281E57567C66F00D92): message 0 (evm): per-tx limit 1000000uqor exceeded (attempted 1"
+    },
+    "Q8 execute after revoke": {
+      "refusedAt": "simulate/broadcast",
+      "error": "fetch failed"
+    },
+    "Q11": {
+      "verifies": true,
+      "tamperedRejected": true
+    }
+  },
+  "link2": "62956A98A684F9F1AF0B9B0A4F45AE0C1CC39A76A1D93877FF56AC7515DBFD5B",
+  "revoke": {
+    "tx": "A5D32D1017CDD11F3700EFBD44F86161FBE61E64D96B410E7838D598F82398A2",
+    "gasUsed": "241770"
+  },
+  "afterRevoke": {
+    "code": 10,
+    "hash": "1D0F074C8CE36C87BE113B9C304A2503D811548A7BBFF0DAE7802FA4BD2112BA",
+    "height": 10489988,
+    "gasUsed": "174913",
+    "gasWanted": "650000",
+    "feeUqor": "97500",
+    "ms": 1658,
+    "rawLog": "failed to execute message; message index: 0: linked key is unbound or revoked: authenticator not permitted for this action",
+    "url": "https://explore.qore.network/tx/1D0F074C8CE36C87BE113B9C304A2503D811548A7BBFF0DAE7802FA4BD2112BA",
+    "executions": []
+  }
+}
