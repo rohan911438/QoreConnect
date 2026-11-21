@@ -1,6 +1,6 @@
 {
   "name": "@qoreconnect/relayer",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "QoreConnect relayer: submits MetaMask-signed MsgExecuteEVM on QoreChain, sponsors onboarding, gas tanks, Migration Meter.",
   "license": "Apache-2.0",
   "type": "module",
@@ -13,7 +13,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "sideEffects": false,
   "scripts": {
@@ -35,5 +36,26 @@
   },
   "devDependencies": {
     "dotenv": "^17.4.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rohan911438/QoreConnect.git",
+    "directory": "packages/relayer"
+  },
+  "homepage": "https://github.com/rohan911438/QoreConnect#readme",
+  "bugs": {
+    "url": "https://github.com/rohan911438/QoreConnect/issues"
+  },
+  "keywords": [
+    "qorechain",
+    "post-quantum",
+    "ml-dsa",
+    "metamask",
+    "wagmi",
+    "account-abstraction",
+    "session-keys"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

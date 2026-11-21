@@ -123,9 +123,15 @@ export async function onboardRoot(o: OnboardOptions): Promise<OnboardResult> {
   if (!o.skipSponsor && (await client.getBalance(address)) < minBalance) {
     if (!o.relayerUrl || !o.ethereum) throw new QoreConnectError('INVALID_INPUT', { message: 'relayerUrl and ethereum are required for sponsorship' })
     emit({ step: 'sponsoring' })
-    const s = await requestSponsorship({ net: o.net, relayerUrl: o.relayerUrl, rootAddress: address, ethereum: o.ethereum, fetch: o.fetch })
-    sponsorTx = s.txHash
-    emit({ step: 'sponsored', txHash: s.txHash, amountUqor: s.amountUqor })
+    try {
+      const s = await requestSponsorship({ net: o.net, relayerUrl: o.relayerUrl, rootAddress: address, ethereum: o.ethereum, fetch: o.fetch })
+      sponsorTx = s.txHash
+      emit({ step: 'sponsored', txHash: s.txHash, amountUqor: s.amountUqor })
+    } catch (e) {
+      // Already sponsored (e.g. a retried onboarding): fine if the funds arrive; otherwise the wait below times out.
+      if (!(e instanceof QoreConnectError && e.code === 'SPONSOR_REFUSED' && /already sponsored/.test(e.message))) throw e
+      emit({ step: 'sponsored' })
+    }
   }
 
   emit({ step: 'waiting-funds' })

@@ -1,3 +1,14 @@
 import { createRoot } from 'react-dom/client'
-function App() { return <h1>Quantum Tip Jar</h1> }
-createRoot(document.getElementById('root')!).render(<App />)
+import { WagmiProvider } from 'wagmi'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { config } from './wagmi'
+import { App } from './App'
+
+const queryClient = new QueryClient()
+createRoot(document.getElementById('root')!).render(
+  <WagmiProvider config={config}>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </WagmiProvider>,
+)

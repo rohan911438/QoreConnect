@@ -77,28 +77,37 @@ export class RestBroadcaster implements Broadcaster {
     const deadline = Date.now() + (this.opts.timeoutMs ?? 60_000)
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, this.opts.pollMs ?? 1_000))
-      const got = await getJson<any>(`${this.net.rest}/cosmos/tx/v1beta1/txs/${hash}`, this.opts.fetch).catch(() => undefined)
-      const t = got?.tx_response
-      if (!t) continue
-      return {
-        code: Number(t.code ?? 0),
-        transactionHash: hash,
-        height: Number(t.height ?? 0),
-        gasUsed: BigInt(t.gas_used ?? 0),
-        gasWanted: BigInt(t.gas_wanted ?? 0),
-        rawLog: t.raw_log ?? '',
-        events: (t.events ?? []).map((e: any) => ({ type: e.type, attributes: (e.attributes ?? []).map((a: any) => ({ key: a.key, value: a.value })) })),
-        msgResponses: decodeMsgResponses(t),
-        feeUqor: '0',
-      }
+      const found = await fetchTxResult(this.net, hash, this.opts.fetch)
+      if (found) return { ...found, feeUqor: '0' }
     }
     throw new QoreConnectError('TX_FAILED', { message: 'Transaction was not included in time', txHash: hash })
   }
 }
 
+/** Look up an included tx by hash over REST; undefined while not (yet) found. */
+export async function fetchTxResult(net: QoreNetwork, hash: string, fetchImpl?: FetchLike): Promise<(TxResult & { tx?: any; timestamp?: string }) | undefined> {
+  const h = (hash.startsWith('0x') ? hash.slice(2) : hash).toUpperCase()
+  const got = await getJson<any>(`${net.rest}/cosmos/tx/v1beta1/txs/${h}`, fetchImpl).catch(() => undefined)
+  const t = got?.tx_response
+  if (!t) return undefined
+  return {
+    code: Number(t.code ?? 0),
+    transactionHash: h,
+    height: Number(t.height ?? 0),
+    gasUsed: BigInt(t.gas_used ?? 0),
+    gasWanted: BigInt(t.gas_wanted ?? 0),
+    rawLog: t.raw_log ?? '',
+    events: (t.events ?? []).map((e: any) => ({ type: e.type, attributes: (e.attributes ?? []).map((a: any) => ({ key: a.key, value: a.value })) })),
+    msgResponses: decodeMsgResponses(t),
+    feeUqor: String(t.tx?.auth_info?.fee?.amount?.find((c: any) => c.denom === 'uqor')?.amount ?? '0'),
+    tx: got.tx ?? t.tx,
+    timestamp: t.timestamp,
+  }
+}
+
 /**
- * Decode msg_responses from a REST tx_response. Cosmos SDK 0.50+ REST includes them in `tx_response.tx`? No:
- * they are in `data` (hex-encoded TxMsgData). We decode the protobuf by hand to avoid extra dependencies:
+ * Decode msg_responses from a REST tx_response: they are in `data` (hex-encoded TxMsgData).
+ * We decode the protobuf by hand to avoid extra dependencies:
  * TxMsgData { repeated Any msg_responses = 2; } and Any { string type_url = 1; bytes value = 2; }.
  */
 function decodeMsgResponses(t: any): { typeUrl: string; value: Uint8Array }[] {

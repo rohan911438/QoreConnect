@@ -14,6 +14,7 @@ overrides:
   viem: 2.58.2
   '@tanstack/react-query': 5.108.0
   '@tanstack/query-core': 5.108.0
+  typescript: 5.9.3
 networkConcurrency: 4
 fetchRetries: 6
 fetchTimeout: 120000

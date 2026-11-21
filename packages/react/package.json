@@ -1,6 +1,6 @@
 {
   "name": "@qoreconnect/react",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "React UI for QoreConnect: onboarding, signing preview, approvals, honesty labels.",
   "license": "Apache-2.0",
   "type": "module",
@@ -15,7 +15,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "sideEffects": false,
   "scripts": {
@@ -38,5 +39,26 @@
     "react-dom": "19.3.1",
     "happy-dom": "^21.0.4",
     "@testing-library/react": "^16.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rohan911438/QoreConnect.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/rohan911438/QoreConnect#readme",
+  "bugs": {
+    "url": "https://github.com/rohan911438/QoreConnect/issues"
+  },
+  "keywords": [
+    "qorechain",
+    "post-quantum",
+    "ml-dsa",
+    "metamask",
+    "wagmi",
+    "account-abstraction",
+    "session-keys"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

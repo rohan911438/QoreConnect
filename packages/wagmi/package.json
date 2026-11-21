@@ -1,6 +1,6 @@
 {
   "name": "@qoreconnect/wagmi",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "wagmi connector for QoreConnect: MetaMask users on QoreChain with a post-quantum root key.",
   "license": "Apache-2.0",
   "type": "module",
@@ -15,7 +15,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "sideEffects": false,
   "scripts": {
@@ -34,5 +35,26 @@
   "devDependencies": {
     "@wagmi/core": "2.22.1",
     "viem": "2.58.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rohan911438/QoreConnect.git",
+    "directory": "packages/wagmi"
+  },
+  "homepage": "https://github.com/rohan911438/QoreConnect#readme",
+  "bugs": {
+    "url": "https://github.com/rohan911438/QoreConnect/issues"
+  },
+  "keywords": [
+    "qorechain",
+    "post-quantum",
+    "ml-dsa",
+    "metamask",
+    "wagmi",
+    "account-abstraction",
+    "session-keys"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

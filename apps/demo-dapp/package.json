@@ -2,7 +2,13 @@
   "name": "@qoreconnect/demo-dapp",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "vite --port 5173", "build": "tsc --noEmit && vite build", "typecheck": "tsc --noEmit", "preview": "vite preview" },
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview",
+    "test:e2e": "vitest run"
+  },
   "dependencies": {
     "@qoreconnect/wagmi": "workspace:*",
     "@tanstack/react-query": "5.108.0",
@@ -11,5 +17,18 @@
     "viem": "2.58.2",
     "wagmi": "2.19.5"
   },
-  "devDependencies": { "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "@vitejs/plugin-react": "^5.0.0", "typescript": "5.9.3", "vite": "^7.0.0" }
+  "devDependencies": {
+    "@qoreconnect/core": "workspace:*",
+    "@qoreconnect/relayer": "workspace:*",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "dotenv": "^17.4.2",
+    "happy-dom": "^21.0.4",
+    "typescript": "5.9.3",
+    "undici": "^7.30.2",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.7"
+  }
 }
