@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+
+# env and secrets (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# local data
+*.db
+*.db-journal
+*.sqlite
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
