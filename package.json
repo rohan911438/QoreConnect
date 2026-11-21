@@ -5,15 +5,17 @@
   "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@11.13.1",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "build": "pnpm -r --filter ./packages/** run build && pnpm -r --filter ./apps/** run build",
-    "build:packages": "pnpm -r --filter ./packages/** run build",
+    "build": "pnpm -r --filter \"./packages/**\" run build && pnpm -r --filter \"./apps/**\" run build",
+    "build:packages": "pnpm -r --filter \"./packages/**\" run build",
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "pnpm -r run typecheck",
-    "test": "pnpm -r --filter ./packages/** run test",
-    "test:integration": "pnpm -r --filter ./packages/** run test:integration",
+    "test": "pnpm -r --filter \"./packages/**\" run test",
+    "test:integration": "pnpm -r --filter \"./packages/**\" run test:integration",
     "test:contracts": "cd contracts && forge test -vv",
     "dev:web": "pnpm --filter @qoreconnect/web dev",
     "dev:relayer": "pnpm --filter @qoreconnect/relayer-app dev",
