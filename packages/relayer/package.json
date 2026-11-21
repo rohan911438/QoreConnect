@@ -20,16 +20,19 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:integration": "vitest run --dir test/integration --passWithNoTests"
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests"
   },
   "dependencies": {
+    "@qorechain/sdk": "0.14.0",
     "@qoreconnect/core": "workspace:*",
     "hono": "^4.13.19",
-    "zod": "^4.6.7",
-    "@qorechain/sdk": "0.14.0",
-    "viem": "2.58.2"
+    "viem": "2.58.2",
+    "zod": "^4.6.7"
   },
   "engines": {
     "node": ">=22.5"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2"
   }
 }

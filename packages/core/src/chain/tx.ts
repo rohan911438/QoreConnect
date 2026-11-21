@@ -168,11 +168,11 @@ export async function sendTx(
   const signer = new EthNativeSigner(account, { signMode: mode, rest: net.rest, fetch: fetchImpl as any })
   const { accountNumber, sequence } = await accountSequence(net, account.cosmos, fetchImpl)
   const signBytesVersion = mode === 'hybrid' ? await signer.resolveSignBytesVersion(net.chainId) : undefined
-  const build = (gas: number) =>
+  const build = (gas: number, feeUqor = Math.ceil(gas * net.gasPrice)) =>
     signer.sign({
       chainId: net.chainId,
       messages,
-      fee: { amount: [{ denom: 'uqor', amount: String(Math.ceil(gas * net.gasPrice)) }], gas: String(gas) },
+      fee: { amount: [{ denom: 'uqor', amount: String(feeUqor) }], gas: String(gas) },
       memo: opts.memo,
       accountNumber,
       sequence,
@@ -181,7 +181,7 @@ export async function sendTx(
   let gas: number
   if (typeof opts.gas === 'number') gas = opts.gas
   else {
-    const simulated = await simulateTx(net, build(3_000_000).txRawBytes, fetchImpl)
+    const simulated = await simulateTx(net, build(3_000_000, 0).txRawBytes, fetchImpl) // zero fee: simulate skips the min-fee check, and a new account cannot afford a 3M-gas fee
     gas = Math.max(Math.ceil(simulated * 1.3) + 5_000, opts.minGas ?? 0)
   }
   const signed = build(gas)
