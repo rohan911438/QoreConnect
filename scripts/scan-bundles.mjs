@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process, console */
 /**
  * P13 G6: no secret in client bundles. Scans the browser-facing build output of the web app and the demo dApp for
  *  - the NAME of every server-side secret in .env.example (a name in a client bundle means the value may be too),
