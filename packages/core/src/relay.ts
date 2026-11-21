@@ -127,6 +127,19 @@ export async function signRelayRequest(o: {
   return toRelayRequest(msg, o.tankId)
 }
 
+export interface RelayActivity {
+  txHash: string | null
+  signer: string
+  target: string | null
+  success: boolean
+  code: number | null
+  error: string | null
+  feeUqor: string | null
+  valueUqor: string | null
+  tankId: string
+  createdAt: number
+}
+
 /** Thin HTTP client for a QoreConnect relayer. */
 export class RelayerClient {
   constructor(
@@ -154,6 +167,17 @@ export class RelayerClient {
       return BigInt(j.valueUqor)
     } catch {
       return undefined
+    }
+  }
+
+  /** Recent relayed calls for an account (dashboard). */
+  async activity(account: string): Promise<RelayActivity[]> {
+    try {
+      const r = await this.f(`${this.baseUrl.replace(/\/$/, '')}/v1/accounts/${account}/activity`)
+      if (!r.ok) return []
+      return ((await r.json()) as any).items ?? []
+    } catch {
+      return []
     }
   }
 

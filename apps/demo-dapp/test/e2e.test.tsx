@@ -74,6 +74,8 @@ describe.skipIf(!MNEMONIC)('demo dApp E2E on Diana (headless MetaMask)', () => {
     fireEvent.click(await screen.findByText(/Connect with QoreConnect/))
     await waitFor(() => expect(screen.getByTestId('account').textContent).toContain(root.evmAddress.slice(2, 10)), { timeout: 180_000, interval: 1_000 })
     const tConnected = Date.now()
+    // P09: onboarding (sponsor + register + link) needs exactly ONE MetaMask signature.
+    expect(signatures).toBe(1)
     fireEvent.click(screen.getByText('Increment'))
     // P08: the preview appears BEFORE MetaMask is asked to sign.
     const signedBefore = signatures

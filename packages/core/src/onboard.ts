@@ -6,6 +6,13 @@ import { RestBroadcaster, type Broadcaster } from './chain/tx'
 import type { FetchLike } from './chain/http'
 import type { RootSigner } from './vault/signer'
 
+/** MetaMask's authenticator-link possession proof (one personal_sign over chain, root and MetaMask key). */
+export interface LinkProof {
+  metamaskAddress: string
+  pubkey: Uint8Array
+  possessionProof: Uint8Array
+}
+
 /** Minimal EIP-1193 provider surface (MetaMask). */
 export interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] | object }): Promise<any>
@@ -48,6 +55,8 @@ export interface OnboardOptions {
   /** Funds needed before registering (uqor). Registration measured at ~0.059 QOR in P01. */
   minBalanceUqor?: bigint
   timeoutMs?: number
+  /** Authorise sponsorship with the link proof (single-signature onboarding). */
+  linkProof?: LinkProof
 }
 
 export interface OnboardResult {
@@ -70,31 +79,44 @@ export async function requestSponsorship(opts: {
   net: QoreNetwork
   relayerUrl: string
   rootAddress: string
-  ethereum: Eip1193Provider
+  ethereum?: Eip1193Provider
   fetch?: FetchLike
+  /** Reuse the authenticator-link possession proof instead of asking MetaMask for a second signature. */
+  linkProof?: LinkProof
 }): Promise<{ txHash: string; amountUqor: string }> {
-  const [metamaskAddress] = (await opts.ethereum.request({ method: 'eth_requestAccounts' })) as string[]
-  if (!metamaskAddress) throw new QoreConnectError('USER_REJECTED')
-  const message = sponsorMessage({ chainId: opts.net.chainId, rootAddress: opts.rootAddress, metamaskAddress })
-  const hex = '0x' + Array.from(new TextEncoder().encode(message), (b) => b.toString(16).padStart(2, '0')).join('')
+  let metamaskAddress: string
   let signature: string
-  try {
-    signature = await opts.ethereum.request({ method: 'personal_sign', params: [hex, metamaskAddress] })
-  } catch (e: any) {
-    if (e?.code === 4001) throw new QoreConnectError('USER_REJECTED')
-    throw e
+  let proof: 'link' | undefined
+  if (opts.linkProof) {
+    metamaskAddress = opts.linkProof.metamaskAddress
+    signature = '0x' + Array.from(opts.linkProof.possessionProof, (b) => b.toString(16).padStart(2, '0')).join('')
+    proof = 'link'
+  } else {
+    if (!opts.ethereum) throw new QoreConnectError('INVALID_INPUT', { message: 'ethereum or linkProof is required' })
+    const [addr] = (await opts.ethereum.request({ method: 'eth_requestAccounts' })) as string[]
+    if (!addr) throw new QoreConnectError('USER_REJECTED')
+    metamaskAddress = addr
+    const message = sponsorMessage({ chainId: opts.net.chainId, rootAddress: opts.rootAddress, metamaskAddress })
+    const hex = '0x' + Array.from(new TextEncoder().encode(message), (b) => b.toString(16).padStart(2, '0')).join('')
+    try {
+      signature = await opts.ethereum.request({ method: 'personal_sign', params: [hex, metamaskAddress] })
+    } catch (e: any) {
+      if (e?.code === 4001) throw new QoreConnectError('USER_REJECTED')
+      throw e
+    }
   }
   const f = opts.fetch ?? ((i: string, init?: RequestInit) => globalThis.fetch(i, init))
   const res = await f(`${opts.relayerUrl.replace(/\/$/, '')}/v1/sponsor`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ rootAddress: opts.rootAddress, metamaskAddress, signature }),
+    body: JSON.stringify({ rootAddress: opts.rootAddress, metamaskAddress, signature, proof }),
   }).catch((e) => {
     throw new QoreConnectError('RELAYER_UNAVAILABLE', { detail: String(e) })
   })
   const body: any = await res.json().catch(() => ({}))
   if (res.status === 429) throw new QoreConnectError('RATE_LIMITED', { detail: body?.error })
-  if (!res.ok) throw new QoreConnectError('SPONSOR_REFUSED', { message: body?.error ?? undefined, detail: JSON.stringify(body) })
+  if (!res.ok)
+    throw new QoreConnectError('SPONSOR_REFUSED', { message: body?.error ?? undefined, detail: JSON.stringify(body) })
   return { txHash: body.txHash, amountUqor: String(body.amount) }
 }
 
@@ -121,15 +143,24 @@ export async function onboardRoot(o: OnboardOptions): Promise<OnboardResult> {
   let sponsorTx: string | undefined
   const minBalance = o.minBalanceUqor ?? 70_000n
   if (!o.skipSponsor && (await client.getBalance(address)) < minBalance) {
-    if (!o.relayerUrl || !o.ethereum) throw new QoreConnectError('INVALID_INPUT', { message: 'relayerUrl and ethereum are required for sponsorship' })
+    if (!o.relayerUrl || (!o.ethereum && !o.linkProof))
+      throw new QoreConnectError('INVALID_INPUT', { message: 'relayerUrl and ethereum are required for sponsorship' })
     emit({ step: 'sponsoring' })
     try {
-      const s = await requestSponsorship({ net: o.net, relayerUrl: o.relayerUrl, rootAddress: address, ethereum: o.ethereum, fetch: o.fetch })
+      const s = await requestSponsorship({
+        net: o.net,
+        relayerUrl: o.relayerUrl,
+        rootAddress: address,
+        ethereum: o.ethereum,
+        fetch: o.fetch,
+        linkProof: o.linkProof,
+      })
       sponsorTx = s.txHash
       emit({ step: 'sponsored', txHash: s.txHash, amountUqor: s.amountUqor })
     } catch (e) {
       // Already sponsored (e.g. a retried onboarding): fine if the funds arrive; otherwise the wait below times out.
-      if (!(e instanceof QoreConnectError && e.code === 'SPONSOR_REFUSED' && /already sponsored/.test(e.message))) throw e
+      if (!(e instanceof QoreConnectError && e.code === 'SPONSOR_REFUSED' && /already sponsored/.test(e.message)))
+        throw e
       emit({ step: 'sponsored' })
     }
   }
@@ -143,14 +174,28 @@ export async function onboardRoot(o: OnboardOptions): Promise<OnboardResult> {
 
   emit({ step: 'registering' })
   const account = o.root.unsafeAccount()
-  const proofOfPossession = signProofOfPossession({ chainId: o.net.chainId, account: address, algorithmId: 1, keypair: account.pqc })
-  const msg = buildRegisterPqcKeyMsg(address, { pqcKeypair: account.pqc, ecdsaPubkey: hexToBytes(account.publicKey), keyType: 'hybrid', proofOfPossession })
+  const proofOfPossession = signProofOfPossession({
+    chainId: o.net.chainId,
+    account: address,
+    algorithmId: 1,
+    keypair: account.pqc,
+  })
+  const msg = buildRegisterPqcKeyMsg(address, {
+    pqcKeypair: account.pqc,
+    ecdsaPubkey: hexToBytes(account.publicKey),
+    keyType: 'hybrid',
+    proofOfPossession,
+  })
   const res = await o.root.signAndBroadcast(o.net, [msg], broadcaster, { mode: 'classical' }, o.fetch)
 
   for (;;) {
     const st = await client.getPqcKey(address, { fresh: true })
     if (st.registered && st.possessionProven) break
-    if (Date.now() > deadline) throw new QoreConnectError('TX_FAILED', { message: 'Key registration was not confirmed in time.', txHash: res.transactionHash })
+    if (Date.now() > deadline)
+      throw new QoreConnectError('TX_FAILED', {
+        message: 'Key registration was not confirmed in time.',
+        txHash: res.transactionHash,
+      })
     await sleep(1_000)
   }
   const ms = Date.now() - t0

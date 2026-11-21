@@ -8,8 +8,8 @@ import { RelayerClient, signRelayRequest, type RelayRequest } from '../relay'
 import type { Eip1193Provider } from '../onboard'
 import type { RootSigner } from '../vault/signer'
 import { RootVault } from '../vault/vault'
-import { approveDapp, getSessionState, linkSessionKey } from '../account/session'
-import { onboardRoot } from '../onboard'
+import { approveDapp, getSessionState } from '../account/session'
+import { onboardAndLink } from '../flow'
 import { normaliseCall } from '../account/rules'
 import { toRpcError } from './errors'
 import { buildPreview, type Preview } from '../preview/preview'
@@ -288,10 +288,8 @@ export class QoreConnectProvider implements Eip1193Provider {
   /** Bring an unlocked root on chain and link the current MetaMask with this dApp's contracts. */
   async headlessOnboard(root: RootSigner): Promise<RootSigner> {
     const mm = await this.requireMetaMask()
-    await onboardRoot({ net: this.net, root, ethereum: mm, relayerUrl: this.opts.relayerUrl, fetch: this.opts.fetch })
-    if (!(await this.isLinked(root.qorAddress, this.metamaskAddress!))) {
-      await linkSessionKey({ net: this.net, root, fetch: this.opts.fetch, metamask: mm, metamaskAddress: this.metamaskAddress, contracts: this.opts.contracts })
-    }
+    if (await this.isLinked(root.qorAddress, this.metamaskAddress!)) return root
+    await onboardAndLink({ net: this.net, vault: this.vault, root, metamask: mm, metamaskAddress: this.metamaskAddress, relayerUrl: this.opts.relayerUrl, contracts: this.opts.contracts, fetch: this.opts.fetch })
     return root
   }
 

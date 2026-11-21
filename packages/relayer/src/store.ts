@@ -253,6 +253,26 @@ export class RelayerStore {
     return rows.reduce((a, r) => a + BigInt(r.value_uqor), 0n)
   }
 
+  accountActivity(account: string, limit = 25) {
+    const rows = this.db
+      .prepare(
+        'SELECT tx_hash, signer, target, success, code, error, fee_uqor, value_uqor, tank_id, created_at FROM relays WHERE account = ? ORDER BY id DESC LIMIT ?',
+      )
+      .all(account, limit) as any[]
+    return rows.map((r) => ({
+      txHash: r.tx_hash ?? null,
+      signer: r.signer,
+      target: r.target,
+      success: r.success === 1,
+      code: r.code,
+      error: r.error,
+      feeUqor: r.fee_uqor,
+      valueUqor: r.value_uqor,
+      tankId: r.tank_id,
+      createdAt: r.created_at,
+    }))
+  }
+
   getRelay(txHash: string): any {
     return this.db
       .prepare(
