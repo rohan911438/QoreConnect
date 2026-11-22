@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { qore } from '../lib/qore'
 
 /** "Connect with MetaMask": runs onboarding when needed, then opens the dashboard. */
-export function ConnectButton({ className = '' }: { className?: string }) {
+export function ConnectButton({ className = '', size, center }: { className?: string; size?: 'lg'; center?: boolean }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
@@ -21,14 +21,15 @@ export function ConnectButton({ className = '' }: { className?: string }) {
     }
   }
   return (
-    <div className="flex flex-col items-start gap-2">
+    <div className={`flex flex-col gap-2 ${center ? 'items-center' : 'items-start'}`}>
       <button
         type="button"
         onClick={connect}
         disabled={busy}
-        className={`rounded-xl bg-accent px-5 py-3 font-semibold text-accent-fg shadow-sm transition hover:opacity-90 disabled:opacity-60 ${className}`}
+        className={`qw-btn qw-btn-primary ${size === 'lg' ? 'qw-btn-lg' : ''} ${className}`}
       >
         {busy ? 'Connecting…' : 'Connect with MetaMask'}
+        {!busy && <span aria-hidden="true">→</span>}
       </button>
       {error && (
         <p role="alert" className="text-sm text-bad">

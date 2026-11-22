@@ -1,226 +1,499 @@
 import Link from 'next/link'
 import { connection } from 'next/server'
+import type { ReactNode } from 'react'
 import { ConnectButton } from '../components/ConnectButton'
 import { KeyDiagram } from '../components/KeyDiagram'
+import { HeroMock } from '../components/landing/HeroMock'
+import { Bento } from '../components/landing/Bento'
 
 const REPO = 'https://github.com/rohan911438/QoreConnect'
 const EXPLORER = 'https://explore.qore.network'
 const ATTACK_TX = '125E638C8670B49394EDF8F10BCE9DAC7C993A508D57833F9EAFC8B179B5EFF6'
 
 /** Measured on Diana testnet; each links to where it was recorded. */
-const PROOF: { value: string; label: string; source: string }[] = [
-  { value: '1', label: 'MetaMask signature to onboard', source: `${REPO}/blob/main/prompts/STATUS.md` },
-  { value: '35 s', label: 'fresh browser to linked account (E2E on Diana)', source: `${REPO}/blob/main/prompts/STATUS.md` },
-  { value: '0 QOR', label: 'needed to start: setup is sponsored', source: `${REPO}/blob/main/docs/testnet-evidence.md` },
-  { value: '9 lines', label: 'to add QoreConnect to a wagmi dApp', source: `${REPO}/blob/main/apps/demo-dapp/src/wagmi.ts` },
+const PROOF: { value: string; unit?: string; label: string; source: string }[] = [
+  {
+    value: '1',
+    label: 'MetaMask signature to onboard',
+    source: `${REPO}/blob/main/apps/web/e2e/onboard-dashboard.spec.ts`,
+  },
+  {
+    value: '35',
+    unit: 's',
+    label: 'fresh browser to a linked account, E2E on Diana',
+    source: `${REPO}/blob/main/prompts/STATUS.md`,
+  },
+  {
+    value: '0',
+    unit: 'QOR',
+    label: 'needed by the user to start: setup is sponsored',
+    source: `${REPO}/blob/main/docs/benchmark.md`,
+  },
+  {
+    value: '9',
+    unit: 'lines',
+    label: 'to add QoreConnect to a wagmi dApp',
+    source: `${REPO}/blob/main/apps/demo-dapp/src/wagmi.ts`,
+  },
+]
+
+const STACK = [
+  'ML-DSA-87 · FIPS 204',
+  'QoreChain Diana',
+  'MetaMask',
+  'wagmi',
+  'viem',
+  'WebAuthn passkeys',
+  'Abstract accounts',
+  'Foundry',
+  'Hono relayer',
+  'Next.js',
 ]
 
 const STEPS: { n: string; title: string; body: string }[] = [
-  { n: '01', title: 'Create a quantum-safe root', body: 'One passkey tap makes an ML-DSA-87 key in your browser. It is encrypted on your device and registered on QoreChain.' },
-  { n: '02', title: 'Link MetaMask, with limits', body: 'One MetaMask signature links it as a session key: approved dApps only, a per-transaction cap and a daily cap.' },
-  { n: '03', title: 'Use any EVM dApp', body: 'MetaMask keeps signing. A relayer pays gas, and the chain enforces your limits on every call.' },
+  {
+    n: '01',
+    title: 'Create a quantum-safe root',
+    body: 'One passkey tap makes an ML-DSA-87 key in your browser. It is encrypted on your device and registered on QoreChain.',
+  },
+  {
+    n: '02',
+    title: 'Link MetaMask, with limits',
+    body: 'One MetaMask signature links it as a session key: approved dApps only, a per-transaction cap and a daily cap.',
+  },
+  {
+    n: '03',
+    title: 'Use any EVM dApp',
+    body: 'MetaMask keeps signing. A relayer pays gas, and the chain itself enforces your limits on every call.',
+  },
 ]
 
-type Status = 'Shipped' | 'In progress' | 'Planned'
-const FEATURES: { title: string; body: string; status: Status; wide?: boolean; full?: boolean; icon: keyof typeof ICONS }[] = [
-  { title: 'Never sign blind', body: 'Before MetaMask opens, you see the decoded call, a simulation and whether the chain would refuse it.', status: 'Shipped', wide: true, icon: 'eye' },
-  { title: 'Q-Day kill switch', body: 'One passkey tap revokes every classical key at once. Only your quantum-safe root can act after that.', status: 'Shipped', icon: 'power' },
-  { title: 'Gasless onboarding', body: 'Setup fees are sponsored; dApps pay gas from their own gas tanks.', status: 'Shipped', icon: 'fuel' },
-  { title: 'Agent mode', body: 'AI agents get their own capped sub-accounts and act only on instructions your quantum-safe root signed.', status: 'Shipped', icon: 'bot' },
-  { title: 'Doctor', body: 'Paste any address: it finds the first thing that would make a transaction fail, and how to fix it.', status: 'Shipped', icon: 'pulse' },
-  { title: 'Migration Meter', body: 'A public, on-chain count of accounts with a post-quantum root. A number that can be checked is a fact.', status: 'Shipped', full: true, icon: 'chart' },
+type Cell = 'yes' | 'no' | string
+const COMPARE: { row: string; mm: Cell; qorex: Cell; aa: Cell; qc: Cell }[] = [
+  { row: 'Root key is post-quantum', mm: 'no', qorex: 'yes', aa: 'no', qc: 'yes' },
+  { row: 'Works on QoreChain’s EVM lane', mm: 'no', qorex: 'yes', aa: 'Not deployed', qc: 'yes' },
+  { row: 'Keep using MetaMask', mm: 'yes', qorex: 'no', aa: 'no', qc: 'yes' },
+  { row: 'Limits enforced by the chain', mm: 'no', qorex: 'Not documented', aa: 'By contracts', qc: 'yes' },
+  { row: 'Revoke every classical key in 1 tx', mm: 'no', qorex: 'n/a', aa: 'Per owner', qc: 'yes' },
+  { row: 'User needs gas to start', mm: 'Buy QOR', qorex: 'Buy QOR', aa: 'Paymaster', qc: 'Sponsored' },
 ]
 
-const TONE: Record<Status, string> = { Shipped: 'bg-ok-bg text-ok', 'In progress': 'bg-warn-bg text-warn', Planned: 'bg-line text-muted' }
-
-const ICONS = {
-  eye: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
-  power: 'M12 2v9M6.3 6.3a8 8 0 1 0 11.4 0',
-  fuel: 'M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M15 9h2a2 2 0 0 1 2 2v6a2 2 0 0 0 4 0V8l-3-3M7 8h5',
-  bot: 'M12 3v3M5 10a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3zM9.5 13h.01M14.5 13h.01M2 13h3M19 13h3',
-  chart: 'M3 21h18M6 17V11M11 17V6M16 17v-4M21 17V8',
-  pulse: 'M3 12h4l2.5-6 5 12 2.5-6H21',
+function CellView({ v, strong }: { v: Cell; strong?: boolean }) {
+  if (v === 'yes')
+    return (
+      <span className={`inline-flex items-center gap-1.5 ${strong ? 'font-semibold text-ok' : 'text-ok'}`}>
+        <span aria-hidden="true">●</span> Yes
+      </span>
+    )
+  if (v === 'no')
+    return (
+      <span className="inline-flex items-center gap-1.5 text-muted">
+        <span aria-hidden="true" className="text-bad">
+          ○
+        </span>{' '}
+        No
+      </span>
+    )
+  return <span className={strong ? 'font-semibold' : 'text-muted'}>{v}</span>
 }
 
-function Icon({ d }: { d: string }) {
+function Section({
+  id,
+  eyebrow,
+  title,
+  intro,
+  children,
+  className = '',
+}: {
+  id: string
+  eyebrow: string
+  title: ReactNode
+  intro?: ReactNode
+  children: ReactNode
+  className?: string
+}) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d={d} />
-    </svg>
+    <section aria-labelledby={id} className={`space-y-10 ${className}`}>
+      <div className="qw-reveal max-w-3xl space-y-4">
+        <p className="qw-eyebrow">{eyebrow}</p>
+        <h2 id={id} className="qw-h2">
+          {title}
+        </h2>
+        {intro && <p className="max-w-2xl text-lg text-muted">{intro}</p>}
+      </div>
+      {children}
+    </section>
   )
 }
 
-const SNIPPET = `import { qoreConnect, qoreTransport, qorechainDiana } from '@qoreconnect/wagmi'
-import { createQoreConnectUI } from '@qoreconnect/react'
-
-const ui = createQoreConnectUI()
-export const config = createConfig({
-  chains: [qorechainDiana],
-  connectors: [qoreConnect({ appName: 'My dApp', contracts: [MY_CONTRACT],
-    gasTankId: 'my-dapp', relayerUrl: RELAYER, ui: ui.hooks })],
-  transports: { [qorechainDiana.id]: qoreTransport() },
-})`
+/* Hand-highlighted snippet (no runtime highlighter, nothing third-party). */
+const K = ({ c }: { c: string }) => <span className="text-accent-2">{c}</span>
+const S = ({ c }: { c: string }) => <span className="text-ok">{c}</span>
+const F = ({ c }: { c: string }) => <span className="text-warn">{c}</span>
+const M = ({ c }: { c: string }) => <span className="text-muted">{c}</span>
 
 /** The landing page onboards (creates the root vault), so it is rendered per request for the CSP nonce (T17). */
 export default async function Home() {
   await connection()
   return (
-    <div className="space-y-28 pt-10 sm:pt-16">
-      {/* Hero */}
-      <section className="grid items-center gap-10 lg:grid-cols-[1.15fr_1fr]">
-        <div className="space-y-7">
-          <p className="qc-rise inline-flex items-center gap-2 rounded-full border border-line bg-panel/70 px-3 py-1 text-xs font-medium text-muted backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
-            Build Before Q-Day · live on QoreChain Diana testnet
-          </p>
-          <h1 className="qc-rise-2 font-display text-[clamp(2.5rem,6.2vw,4.4rem)] font-semibold leading-[1.02] tracking-tight">
-            The migration layer for the <span className="qc-gradient-text">migration year.</span>
+    <div className="space-y-36 pt-10 sm:pt-16">
+      {/* ---------------- Hero ---------------- */}
+      <section className="grid items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
+        <div className="space-y-8">
+          <a
+            href={`${EXPLORER}/tx/${ATTACK_TX}`}
+            rel="noreferrer noopener"
+            className="qw-rise group inline-flex items-center gap-2.5 rounded-full border border-line bg-panel/60 py-1 pl-1 pr-3.5 text-xs text-muted backdrop-blur transition hover:border-accent/50"
+          >
+            <span className="rounded-full bg-accent px-2 py-0.5 font-semibold text-accent-fg">Live</span>
+            Build Before Q-Day · on QoreChain Diana testnet
+            <span aria-hidden="true" className="transition group-hover:translate-x-0.5">
+              →
+            </span>
+          </a>
+          <h1 className="qw-rise-2 font-display text-[clamp(2.8rem,6.2vw,5.4rem)] font-semibold leading-[0.95] tracking-[-0.045em]">
+            The migration layer for the <span className="qw-gradient-text">migration year.</span>
           </h1>
-          <p className="qc-rise-3 max-w-xl text-lg text-muted sm:text-xl">
-            <span className="text-fg">Quantum-safe root. MetaMask convenience.</span> QoreChain needs a post-quantum key for EVM transactions, and
-            MetaMask cannot hold one. QoreConnect gives your account that key and turns MetaMask into a capped, scoped, revocable session key.
+          <p className="qw-rise-3 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
+            <span className="text-fg">Quantum-safe root. MetaMask convenience.</span> QoreChain needs a post-quantum key
+            for EVM transactions, and MetaMask cannot hold one. QoreConnect gives your account that key and turns
+            MetaMask into a capped, scoped, revocable session key.
           </p>
-          <div className="flex flex-wrap items-start gap-3">
-            <ConnectButton />
-            <Link href="/account" className="rounded-xl border border-line bg-panel px-5 py-3 font-semibold transition hover:border-accent">
-              Open your account
+          <div className="qw-rise-4 flex flex-wrap items-start gap-3">
+            <ConnectButton size="lg" />
+            <Link href="/doctor" className="qw-btn qw-btn-lg">
+              Check an address
             </Link>
           </div>
-          <p className="max-w-xl text-sm text-muted">
-            Honesty built in: MetaMask&apos;s own key stays classical (secp256k1). QoreConnect limits what it can do, and your quantum-safe root
-            can revoke it at any time.
+          <p className="qw-rise-4 flex max-w-xl items-start gap-2.5 text-sm text-muted">
+            <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-warn" />
+            Honesty built in: MetaMask&apos;s own key stays classical (secp256k1). QoreConnect limits what it can do,
+            and your quantum-safe root can revoke it at any time.
           </p>
         </div>
-        <KeyDiagram />
+        <HeroMock />
       </section>
 
-      {/* Proof strip */}
-      <section aria-labelledby="proof" className="space-y-5">
-        <h2 id="proof" className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+      {/* ---------------- Built with ---------------- */}
+      <section aria-label="Built with" className="-mt-16 space-y-5">
+        <p className="text-center font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Built with</p>
+        <div className="qw-marquee overflow-hidden">
+          <div className="qw-marquee-track">
+            {[...STACK, ...STACK].map((s, i) => (
+              <span
+                key={i}
+                aria-hidden={i >= STACK.length}
+                className="whitespace-nowrap font-display text-lg font-medium text-muted/80"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------- Proof ---------------- */}
+      <section aria-labelledby="proof" className="space-y-6">
+        <h2 id="proof" className="qw-eyebrow">
           Measured on Diana, not promised
         </h2>
-        <ul className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PROOF.map((p) => (
-            <li key={p.label} className="bg-panel p-5 sm:p-6">
-              <a href={p.source} className="group block" rel="noreferrer noopener">
-                <span className="block font-display text-3xl font-semibold tracking-tight sm:text-4xl">{p.value}</span>
-                <span className="mt-1 block text-sm text-muted">{p.label}</span>
-                <span className="mt-3 inline-block text-xs text-muted underline-offset-4 group-hover:text-accent group-hover:underline">Source ↗</span>
+            <li key={p.label} className="qw-reveal">
+              <a href={p.source} rel="noreferrer noopener" className="qw-surface qw-ring group block h-full p-6">
+                <span className="block font-display text-6xl font-semibold leading-none tracking-[-0.05em]">
+                  <span className="qw-gradient-text">{p.value}</span>
+                  {p.unit && <span className="ml-1.5 text-2xl tracking-tight text-muted">{p.unit}</span>}
+                </span>
+                <span className="mt-4 block text-sm text-muted">{p.label}</span>
+                <span className="mt-5 inline-flex items-center gap-1 font-mono text-[11px] text-muted transition group-hover:text-accent">
+                  source ↗
+                </span>
               </a>
             </li>
           ))}
         </ul>
       </section>
 
-      {/* How it works */}
-      <section aria-labelledby="how" className="space-y-8">
-        <div className="max-w-2xl space-y-3">
-          <h2 id="how" className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            Crypto without the homework.
-          </h2>
-          <p className="text-muted">No new wallet, no seed phrase to write down first, no gas to buy. Three steps, about half a minute.</p>
-        </div>
-        <ol className="grid gap-4 md:grid-cols-3">
-          {STEPS.map((s) => (
-            <li key={s.n} className="qc-card p-6">
-              <span className="font-mono text-sm text-accent">{s.n}</span>
-              <h3 className="mt-3 text-lg font-semibold">{s.title}</h3>
-              <p className="mt-2 text-sm text-muted">{s.body}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* Features (bento) */}
-      <section aria-labelledby="features" className="space-y-8">
-        <h2 id="features" className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-          What you get
-        </h2>
-        <ul className="grid gap-4 md:grid-cols-3">
-          {FEATURES.map((f) => (
-            <li key={f.title} className={`qc-card flex flex-col p-6 ${f.wide ? 'md:col-span-2' : f.full ? 'md:col-span-3' : ''}`}>
-              <div className="flex items-start justify-between gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl border border-line bg-panel-2 text-accent">
-                  <Icon d={ICONS[f.icon]} />
+      {/* ---------------- How it works ---------------- */}
+      <Section
+        id="how"
+        eyebrow="How it works"
+        title="Crypto without the homework."
+        intro="No new wallet, no seed phrase to write down first, no gas to buy. Three steps, about half a minute."
+      >
+        <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.1fr]">
+          <div className="qw-surface qw-reveal p-6">
+            <KeyDiagram />
+          </div>
+          <ol className="relative space-y-4 before:absolute before:bottom-8 before:left-[27px] before:top-8 before:w-px before:bg-gradient-to-b before:from-accent before:via-accent-2 before:to-transparent">
+            {STEPS.map((s) => (
+              <li key={s.n} className="qw-reveal relative flex gap-5 rounded-2xl p-3">
+                <span className="relative z-10 grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-line bg-panel font-mono text-sm text-accent shadow-[var(--shadow)]">
+                  {s.n}
                 </span>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${TONE[f.status]}`}>{f.status}</span>
-              </div>
-              <h3 className="mt-5 text-lg font-semibold">{f.title}</h3>
-              <p className="mt-2 text-sm text-muted">{f.body}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+                <div className="pt-1.5">
+                  <h3 className="text-xl font-semibold">{s.title}</h3>
+                  <p className="mt-1.5 leading-relaxed text-muted">{s.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </Section>
 
-      {/* Attack */}
-      <section aria-labelledby="attack" className="relative overflow-hidden rounded-3xl border border-line bg-panel p-6 sm:p-10">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-bad-bg blur-3xl" />
-        <div className="relative grid gap-8 lg:grid-cols-2 lg:items-center">
-          <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-bad">The attack demo</p>
-            <h2 id="attack" className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              We stole the MetaMask key. The chain still said no.
+      {/* ---------------- Features ---------------- */}
+      <Section
+        id="features"
+        eyebrow="What you get"
+        title={
+          <>
+            Everything a careful user wants. <span className="text-muted">Nothing to learn.</span>
+          </>
+        }
+      >
+        <Bento />
+      </Section>
+
+      {/* ---------------- Attack ---------------- */}
+      <section
+        aria-labelledby="attack"
+        className="qw-reveal relative overflow-hidden rounded-[2rem] border border-bad/25 bg-panel p-6 sm:p-12"
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-40 -top-40 h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(closest-side,var(--bad-bg),transparent)] blur-2xl"
+        />
+        <div className="relative grid gap-10 lg:grid-cols-2 lg:items-center">
+          <div className="space-y-5">
+            <p className="qw-eyebrow !text-bad">The attack demo</p>
+            <h2 id="attack" className="qw-h2">
+              We stole the MetaMask key. <span className="text-bad">The chain still said no.</span>
             </h2>
-            <p className="text-muted">
-              A drainer dApp signed a call with a linked MetaMask key and sent it through its own relayer, skipping every QoreConnect check. QoreChain
-              refused it on chain, because the drainer was never on the account&apos;s allow-list.
+            <p className="text-lg leading-relaxed text-muted">
+              A drainer dApp signed a call with a linked MetaMask key and sent it through its own relayer, skipping
+              every QoreConnect check. QoreChain refused it on chain, because the drainer was never on the
+              account&apos;s allow-list.
             </p>
-            <a href={`${EXPLORER}/tx/${ATTACK_TX}`} className="inline-flex items-center gap-2 text-sm font-semibold text-accent hover:underline" rel="noreferrer noopener">
+            <a href={`${EXPLORER}/tx/${ATTACK_TX}`} className="qw-btn" rel="noreferrer noopener">
               See the refused transaction ↗
             </a>
           </div>
-          <div className="rounded-2xl border border-line bg-bg p-5 font-mono text-[13px] leading-relaxed">
-            <p className="text-muted">$ pnpm demo:attack</p>
-            <p>
-              <span className="text-ok">✓</span> control tip 0.1 QOR <span className="text-muted">success</span>
-            </p>
-            <p>
-              <span className="text-bad">✕</span> drainer via QoreConnect relayer <span className="text-muted">NOT_APPROVED, no fee</span>
-            </p>
-            <p>
-              <span className="text-bad">✕</span> drainer via attacker&apos;s own relayer <span className="text-muted">chain code 10</span>
-            </p>
-            <p className="mt-3 break-all text-muted">tx {ATTACK_TX.slice(0, 16)}…{ATTACK_TX.slice(-6)}</p>
+          <div className="qw-window">
+            <div className="qw-window-bar">
+              <i className="!bg-bad/70" />
+              <i className="!bg-warn/70" />
+              <i className="!bg-ok/70" />
+              <span className="ml-3 font-mono text-[11px] text-muted">terminal</span>
+            </div>
+            <div className="space-y-2 p-5 font-mono text-[13px] leading-relaxed">
+              <p className="text-muted">$ pnpm demo:attack</p>
+              <p>
+                <span className="text-ok">✓</span> control tip 0.1 QOR <span className="text-muted">success</span>
+              </p>
+              <p>
+                <span className="text-bad">✕</span> drainer via QoreConnect relayer{' '}
+                <span className="text-muted">NOT_APPROVED, no fee</span>
+              </p>
+              <p>
+                <span className="text-bad">✕</span> drainer via attacker&apos;s own relayer{' '}
+                <span className="text-muted">chain code 10</span>
+              </p>
+              <p className="break-all pt-2 text-muted">
+                tx {ATTACK_TX.slice(0, 16)}…{ATTACK_TX.slice(-6)}
+                <span className="qw-blink ml-1 inline-block h-3.5 w-2 translate-y-0.5 bg-fg/70" aria-hidden="true" />
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Developers */}
-      <section aria-labelledby="dev" className="grid gap-8 lg:grid-cols-[1fr_1.3fr] lg:items-center">
-        <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">For dApp teams</p>
-          <h2 id="dev" className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            One connector. Your code stays the same.
-          </h2>
-          <p className="text-muted">
-            Add the connector and the transport. <code className="font-mono text-sm text-fg">useWriteContract</code> and{' '}
-            <code className="font-mono text-sm text-fg">useWaitForTransactionReceipt</code> keep working; QoreConnect handles keys, previews, gas and
-            receipts.
+      {/* ---------------- Compare ---------------- */}
+      <Section
+        id="compare"
+        eyebrow="Benchmark"
+        title="Why not just switch wallets?"
+        intro={
+          <>
+            You can: QoreX, QoreChain&apos;s own wallet, is post-quantum end to end. QoreConnect is for the people who
+            will not switch, and the dApps that do not want to lose them.{' '}
+            <a
+              className="text-fg underline decoration-line underline-offset-4 hover:decoration-accent"
+              href={`${REPO}/blob/main/docs/benchmark.md`}
+              rel="noreferrer noopener"
+            >
+              Sources and measured costs
+            </a>
+            .
+          </>
+        }
+      >
+        <div className="qw-surface qw-reveal overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-line text-xs text-muted">
+                <th scope="col" className="p-4 font-medium sm:p-5" />
+                <th scope="col" className="p-4 font-medium sm:p-5">
+                  MetaMask alone
+                </th>
+                <th scope="col" className="p-4 font-medium sm:p-5">
+                  QoreX wallet
+                </th>
+                <th scope="col" className="p-4 font-medium sm:p-5">
+                  EVM smart wallets*
+                </th>
+                <th scope="col" className="bg-accent/5 p-4 font-semibold text-fg sm:p-5">
+                  QoreConnect
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {COMPARE.map((r) => (
+                <tr key={r.row} className="border-b border-line/60 last:border-0">
+                  <th scope="row" className="p-4 font-medium sm:p-5">
+                    {r.row}
+                  </th>
+                  <td className="p-4 sm:p-5">
+                    <CellView v={r.mm} />
+                  </td>
+                  <td className="p-4 sm:p-5">
+                    <CellView v={r.qorex} />
+                  </td>
+                  <td className="p-4 sm:p-5">
+                    <CellView v={r.aa} />
+                  </td>
+                  <td className="bg-accent/5 p-4 sm:p-5">
+                    <CellView v={r.qc} strong />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="border-t border-line p-4 text-xs text-muted sm:px-5">
+            *Passkey smart wallets (P-256 owners) and MetaMask smart accounts with ERC-7715 permissions: mature on
+            Ethereum L2s, but their roots are elliptic-curve keys.
           </p>
-          <a href={`${REPO}#integrate-a-dapp-wagmi`} className="inline-flex items-center gap-2 text-sm font-semibold text-accent hover:underline" rel="noreferrer noopener">
-            Read the quick start ↗
-          </a>
         </div>
-        <pre className="overflow-x-auto rounded-2xl border border-line bg-panel p-5 font-mono text-[12.5px] leading-relaxed">
-          <code>{SNIPPET}</code>
-        </pre>
-      </section>
+      </Section>
 
-      {/* Closing */}
+      {/* ---------------- Developers ---------------- */}
+      <Section id="dev" eyebrow="For dApp teams" title="One connector. Your code stays the same.">
+        <div className="grid gap-10 lg:grid-cols-[1fr_1.35fr] lg:items-center">
+          <div className="space-y-5">
+            <p className="text-lg leading-relaxed text-muted">
+              Add the connector and the transport.{' '}
+              <code className="font-mono text-[0.9em] text-fg">useWriteContract</code> and{' '}
+              <code className="font-mono text-[0.9em] text-fg">useWaitForTransactionReceipt</code> keep working;
+              QoreConnect handles keys, previews, gas and receipts.
+            </p>
+            <ul className="space-y-2.5 text-sm">
+              {[
+                'Readable preview before every signature',
+                'Gas paid from your dApp’s gas tank',
+                'Typed errors with a next step for the user',
+              ].map((t) => (
+                <li key={t} className="flex items-center gap-2.5">
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-ok-bg text-[11px] text-ok">✓</span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+            <a href={`${REPO}#integrate-a-dapp-wagmi`} className="qw-btn" rel="noreferrer noopener">
+              Read the quick start ↗
+            </a>
+          </div>
+          <div className="qw-window qw-reveal">
+            <div className="qw-window-bar">
+              <i />
+              <i />
+              <i />
+              <span className="ml-3 font-mono text-[11px] text-muted">wagmi.ts</span>
+            </div>
+            <pre className="overflow-x-auto p-5 font-mono text-[12.5px] leading-[1.7]">
+              <code>
+                <K c="import" /> {'{ qoreConnect, qoreTransport, qorechainDiana }'} <K c="from" />{' '}
+                <S c="'@qoreconnect/wagmi'" />
+                {'\n'}
+                <K c="import" /> {'{ createQoreConnectUI }'} <K c="from" /> <S c="'@qoreconnect/react'" />
+                {'\n\n'}
+                <K c="const" /> ui = <F c="createQoreConnectUI" />
+                ()
+                {'\n'}
+                <K c="export const" /> config = <F c="createConfig" />({'{'}
+                {'\n'}
+                {'  '}chains: [qorechainDiana],
+                {'\n'}
+                {'  '}connectors: [<F c="qoreConnect" />({'{'} appName: <S c="'My dApp'" />, contracts: [MY_CONTRACT],
+                {'\n'}
+                {'    '}gasTankId: <S c="'my-dapp'" />, relayerUrl: RELAYER, ui: ui.hooks {'}'})],
+                {'\n'}
+                {'  '}transports: {'{'} [qorechainDiana.id]: <F c="qoreTransport" />
+                () {'}'},{'\n'}
+                {'}'}){'\n\n'}
+                <M c="// existing hooks keep working" />
+              </code>
+            </pre>
+          </div>
+        </div>
+      </Section>
+
+      {/* ---------------- Explore ---------------- */}
       <section aria-labelledby="more" className="grid gap-4 md:grid-cols-2">
         <h2 id="more" className="sr-only">
           Explore
         </h2>
-        <Link href="/meter" className="qc-card group p-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Public</p>
-          <h3 className="mt-3 font-display text-2xl font-semibold">Migration Meter →</h3>
-          <p className="mt-2 text-sm text-muted">How much of QoreChain&apos;s EVM activity has a post-quantum root, counted on chain with the evidence.</p>
-        </Link>
-        <Link href="/doctor" className="qc-card group p-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Support</p>
-          <h3 className="mt-3 font-display text-2xl font-semibold">Doctor →</h3>
-          <p className="mt-2 text-sm text-muted">Paste an address. Get the first problem and the fix, in one click.</p>
-        </Link>
+        {[
+          {
+            href: '/meter',
+            eyebrow: 'Public',
+            title: 'Migration Meter',
+            body: 'How much of QoreChain’s EVM activity has a post-quantum root, counted on chain with the evidence.',
+          },
+          {
+            href: '/doctor',
+            eyebrow: 'Support',
+            title: 'Doctor',
+            body: 'Paste an address. Get the first problem and the fix, in one click.',
+          },
+        ].map((c) => (
+          <Link key={c.href} href={c.href} className="qw-surface qw-ring qw-lift qw-reveal group block p-8">
+            <p className="qw-eyebrow">{c.eyebrow}</p>
+            <h3 className="mt-4 flex items-center gap-3 font-display text-3xl font-semibold tracking-tight">
+              {c.title}
+              <span
+                aria-hidden="true"
+                className="text-muted transition group-hover:translate-x-1 group-hover:text-accent"
+              >
+                →
+              </span>
+            </h3>
+            <p className="mt-2 text-muted">{c.body}</p>
+          </Link>
+        ))}
+      </section>
+
+      {/* ---------------- CTA ---------------- */}
+      <section
+        aria-labelledby="cta"
+        className="qw-reveal relative overflow-hidden rounded-[2rem] border border-line p-8 text-center sm:p-16"
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-[radial-gradient(80%_120%_at_50%_0%,var(--aurora-1),transparent_60%),radial-gradient(60%_100%_at_80%_100%,var(--aurora-2),transparent_60%)]"
+        />
+        <p className="qw-eyebrow justify-center">Before Q-Day</p>
+        <h2 id="cta" className="qw-h2 mx-auto mt-4 max-w-3xl">
+          Give your MetaMask a <span className="qw-gradient-text">quantum-safe boss.</span>
+        </h2>
+        <p className="mx-auto mt-4 max-w-xl text-lg text-muted">
+          About half a minute, one signature, nothing to pay. Testnet only.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <ConnectButton size="lg" center />
+          <a href={REPO} className="qw-btn qw-btn-lg" rel="noreferrer noopener">
+            View the code
+          </a>
+        </div>
       </section>
     </div>
   )

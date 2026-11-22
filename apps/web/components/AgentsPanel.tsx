@@ -18,21 +18,34 @@ import { TIPJAR_ADDRESS } from '../lib/qore'
 
 type RootAction = (label: string, fn: (ctx: { root: RootSigner }) => Promise<ReactNode>) => Promise<void>
 
-const hexToBytes = (h: string) => Uint8Array.from((h.startsWith('0x') ? h.slice(2) : h).match(/.{1,2}/g) ?? [], (b) => parseInt(b, 16))
+const hexToBytes = (h: string) =>
+  Uint8Array.from((h.startsWith('0x') ? h.slice(2) : h).match(/.{1,2}/g) ?? [], (b) => parseInt(b, 16))
 const short = (a: string, n = 6) => (a.length > 2 * n + 1 ? `${a.slice(0, n)}…${a.slice(-4)}` : a)
-const input = 'w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm'
+const input = 'qw-input'
 
 /**
  * "Agents": each agent gets its own sub-account (never the main balance), a capped key scoped to exact contract
  * functions, and a root-signed instruction. Revoke stops it at the chain.
  */
-export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetwork; busy: boolean; rootAction: RootAction; unlocked: () => RootSigner | undefined }) {
+export function AgentsPanel({
+  net,
+  busy,
+  rootAction,
+  unlocked,
+}: {
+  net: QoreNetwork
+  busy: boolean
+  rootAction: RootAction
+  unlocked: () => RootSigner | undefined
+}) {
   const [agents, setAgents] = useState<AgentView[]>()
   const [open, setOpen] = useState(false)
   const [signed, setSigned] = useState<SignedInstruction>()
   const [agentUrl, setAgentUrl] = useState('http://localhost:8790')
   const [name, setName] = useState('tipper')
-  const [task, setTask] = useState('Tip 0.1 QOR to 0x707B92f6276799f928CCe4D5873f5A2babF85347 with note "thanks from my agent"')
+  const [task, setTask] = useState(
+    'Tip 0.1 QOR to 0x707B92f6276799f928CCe4D5873f5A2babF85347 with note "thanks from my agent"',
+  )
   const [target, setTarget] = useState(TIPJAR_ADDRESS)
   const [signature, setSignature] = useState('function tip(address creator, string note) payable')
   const [perTx, setPerTx] = useState('0.2')
@@ -58,9 +71,14 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
   const create = () =>
     rootAction('Create an agent', async ({ root }) => {
       const base = agentUrl.replace(/\/$/, '')
-      const index = (await listAgents({ net, root, maxIndex: 5 }).catch(() => [])).reduce((m, a) => Math.max(m, a.index), 0) + 1
+      const index =
+        (await listAgents({ net, root, maxIndex: 5 }).catch(() => [])).reduce((m, a) => Math.max(m, a.index), 0) + 1
       const sub = await root.deriveSubAccount(index)
-      const proofRes = await fetch(`${base}/link-proof`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ account: sub.cosmos, root: root.qorAddress }) })
+      const proofRes = await fetch(`${base}/link-proof`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ account: sub.cosmos, root: root.qorAddress }),
+      })
       if (!proofRes.ok) throw new Error(`The agent at ${base} did not answer (${proofRes.status}). Is it running?`)
       const p = await proofRes.json()
       const created = await createAgent({
@@ -73,7 +91,11 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
         limits: { perTxUqor: parseQor(perTx), dailyUqor: parseQor(daily), denoms: ['uqor'] },
         fundUqor: parseQor(fund),
         expiryUnix: Math.floor(Date.now() / 1000) + Math.round(Number(hours) * 3600 || DEFAULT_AGENT_TTL_S),
-        agentProof: { metamaskAddress: p.metamaskAddress, pubkey: hexToBytes(p.pubkey), possessionProof: hexToBytes(p.possessionProof) },
+        agentProof: {
+          metamaskAddress: p.metamaskAddress,
+          pubkey: hexToBytes(p.pubkey),
+          possessionProof: hexToBytes(p.possessionProof),
+        },
       })
       setSigned(created.signed)
       setOpen(false)
@@ -85,9 +107,22 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
     if (!signed) return
     setRunResult('Running…')
     try {
-      const r = await fetch(`${agentUrl.replace(/\/$/, '')}/run`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ signed }) })
+      const r = await fetch(`${agentUrl.replace(/\/$/, '')}/run`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ signed }),
+      })
       const j = await r.json()
-      setRunResult(j.ok ? j.steps.map((s: any) => `${s.call.summary}: ${s.outcome.status}${s.outcome.txHash ? ` (${short(s.outcome.txHash, 8)})` : ''}`).join('; ') || j.summary : `Rejected: ${j.rejected ?? j.error} ${j.detail ?? ''}`)
+      setRunResult(
+        j.ok
+          ? j.steps
+              .map(
+                (s: any) =>
+                  `${s.call.summary}: ${s.outcome.status}${s.outcome.txHash ? ` (${short(s.outcome.txHash, 8)})` : ''}`,
+              )
+              .join('; ') || j.summary
+          : `Rejected: ${j.rejected ?? j.error} ${j.detail ?? ''}`,
+      )
     } catch (e) {
       setRunResult(`Could not reach the agent: ${(e as Error).message}`)
     }
@@ -96,31 +131,45 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
   const download = () => {
     if (!signed) return
     const url = URL.createObjectURL(new Blob([JSON.stringify(signed, null, 2)], { type: 'application/json' }))
-    const a = Object.assign(document.createElement('a'), { href: url, download: `instruction-${signed.instruction.name}.json` })
+    const a = Object.assign(document.createElement('a'), {
+      href: url,
+      download: `instruction-${signed.instruction.name}.json`,
+    })
     a.click()
     URL.revokeObjectURL(url)
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-line bg-panel p-5" aria-labelledby="agents">
+    <section className="qw-surface space-y-4 p-5 sm:p-6" aria-labelledby="agents">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="agents" className="text-lg font-semibold">
           Agents
         </h2>
         <div className="flex gap-2">
           {agents === undefined && (
-            <button type="button" className="rounded-lg border border-line px-3.5 py-2 text-sm font-semibold" disabled={busy} onClick={() => rootAction('Show your agents', async () => (await refresh(), 'Agents loaded.'))}>
+            <button
+              type="button"
+              className="qw-btn"
+              disabled={busy}
+              onClick={() => rootAction('Show your agents', async () => (await refresh(), 'Agents loaded.'))}
+            >
               Show agents
             </button>
           )}
-          <button type="button" className="rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-accent-fg" disabled={busy} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          <button
+            type="button"
+            className="qw-btn qw-btn-primary"
+            disabled={busy}
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+          >
             New agent
           </button>
         </div>
       </div>
       <p className="text-sm text-muted">
-        An AI agent gets its own account and budget, never your main balance. Its key can call only the functions you list, within its caps, until
-        it expires. It acts only on instructions signed by your quantum-safe root.
+        An AI agent gets its own account and budget, never your main balance. Its key can call only the functions you
+        list, within its caps, until it expires. It acts only on instructions signed by your quantum-safe root.
       </p>
 
       {open && (
@@ -149,11 +198,22 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
           </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium">Contract</span>
-            <input className={`${input} font-mono`} value={target} pattern="^0x[0-9a-fA-F]{40}$" required onChange={(e) => setTarget(e.target.value)} />
+            <input
+              className={`${input} font-mono`}
+              value={target}
+              pattern="^0x[0-9a-fA-F]{40}$"
+              required
+              onChange={(e) => setTarget(e.target.value)}
+            />
           </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium">Function</span>
-            <input className={`${input} font-mono`} value={signature} required onChange={(e) => setSignature(e.target.value)} />
+            <input
+              className={`${input} font-mono`}
+              value={signature}
+              required
+              onChange={(e) => setSignature(e.target.value)}
+            />
           </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium">Per transaction (QOR)</span>
@@ -169,7 +229,7 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
             <span className="text-xs text-muted">About 0.07 QOR of it pays the agent account's key registration.</span>
           </label>
           <div className="flex items-end">
-            <button type="submit" className="w-full rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-accent-fg" disabled={busy}>
+            <button type="submit" className="qw-btn qw-btn-primary w-full" disabled={busy}>
               Create agent with passkey
             </button>
           </div>
@@ -177,16 +237,17 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
       )}
 
       {signed && (
-        <div className="space-y-3 rounded-xl border border-line p-4" data-testid="agent-instruction">
+        <div className="space-y-3 rounded-2xl border border-line bg-bg/40 p-4" data-testid="agent-instruction">
           <p className="text-sm">
-            <span className="rounded-full border border-ok px-2 py-0.5 text-xs font-semibold text-ok">Quantum-safe</span> Instruction for{' '}
-            <span className="font-mono">{short(signed.instruction.agent)}</span>, signed with ML-DSA-87 ({signed.signature.length / 2} bytes).
+            <span className="qw-chip bg-ok-bg text-ok">Quantum-safe</span> Instruction for{' '}
+            <span className="font-mono">{short(signed.instruction.agent)}</span>, signed with ML-DSA-87 (
+            {signed.signature.length / 2} bytes).
           </p>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="rounded-lg border border-line px-3.5 py-2 text-sm font-semibold" onClick={sendToAgent}>
+            <button type="button" className="qw-btn" onClick={sendToAgent}>
               Send to agent and run
             </button>
-            <button type="button" className="rounded-lg border border-line px-3.5 py-2 text-sm font-semibold" onClick={download}>
+            <button type="button" className="qw-btn" onClick={download}>
               Download instruction
             </button>
           </div>
@@ -204,22 +265,29 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
                 <div className="min-w-0 space-y-1 text-sm">
                   <p className="font-medium">
                     {a.keys[0]?.label.replace(/^agent:/, '') ?? `Agent ${a.index}`}{' '}
-                    <span className="rounded-full border border-line px-2 py-0.5 text-xs text-muted">Agent, capped</span>
+                    <span className="qw-chip bg-panel-2 text-muted">Agent, capped</span>
                   </p>
                   <p className="text-muted">
                     Account{' '}
-                    <a className="font-mono underline" href={explorerAddress(net, a.account)} target="_blank" rel="noreferrer">
+                    <a
+                      className="font-mono underline"
+                      href={explorerAddress(net, a.account)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       {short(a.account, 10)}
                     </a>{' '}
                     · {formatQor(a.balanceUqor)} QOR ·{' '}
-                    {live.length ? `key ${short('0x' + live[0]!.pubkeyHex)}, expires ${new Date(live[0]!.expiryUnix * 1000).toLocaleString()}` : 'no active key'}
+                    {live.length
+                      ? `key ${short('0x' + live[0]!.pubkeyHex)}, expires ${new Date(live[0]!.expiryUnix * 1000).toLocaleString()}`
+                      : 'no active key'}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   {live.length > 0 && (
                     <button
                       type="button"
-                      className="rounded-lg bg-bad px-3.5 py-2 text-sm font-semibold text-white"
+                      className="qw-btn qw-btn-danger"
                       disabled={busy}
                       onClick={() =>
                         rootAction('Revoke this agent', async ({ root }) => {
@@ -235,7 +303,7 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
                   {a.balanceUqor > 100_000n && (
                     <button
                       type="button"
-                      className="rounded-lg border border-line px-3.5 py-2 text-sm font-semibold"
+                      className="qw-btn"
                       disabled={busy}
                       onClick={() =>
                         rootAction('Return the agent budget', async ({ root }) => {
