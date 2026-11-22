@@ -400,3 +400,93 @@ code {
     width: 100%;
   }
 }
+
+/* ---------- Visual refresh (CSS only; markup and behaviour unchanged) ---------- */
+:root {
+  --radius: 20px;
+  --glow-a: rgba(91, 61, 245, 0.14);
+  --glow-b: rgba(236, 72, 153, 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #09090f;
+    --surface: rgba(22, 22, 33, 0.72);
+    --line: #23233a;
+    --glow-a: rgba(143, 123, 255, 0.2);
+    --glow-b: rgba(236, 72, 153, 0.1);
+  }
+}
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 520px at 10% -10%, var(--glow-a), transparent 70%),
+    radial-gradient(800px 520px at 100% 0%, var(--glow-b), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+.card,
+.stat {
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 24px 60px -30px rgba(0, 0, 0, 0.55);
+  transition: border-color 0.2s ease;
+}
+.card:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+.hero h1 {
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  background: linear-gradient(100deg, var(--text) 40%, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.btn {
+  border-radius: 12px;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.top .btn,
+.btn.primary,
+.btn[data-variant='primary'] {
+  box-shadow: 0 10px 30px -10px var(--accent);
+}
+.input,
+.field textarea,
+.field input {
+  border-radius: 12px;
+}
+.input:focus,
+.field textarea:focus,
+.field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.creator {
+  border-radius: 16px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.creator:hover {
+  transform: translateY(-1px);
+}
+.logo {
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), #ec4899);
+  color: #fff;
+}
+.stat strong,
+.stat b {
+  letter-spacing: -0.03em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .creator:hover {
+    transform: none;
+  }
+}
