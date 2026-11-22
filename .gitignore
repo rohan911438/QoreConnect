@@ -49,3 +49,7 @@ apps/relayer/data/
 # playwright
 apps/web/test-results/
 apps/web/playwright-report/
+
+# Vercel CLI link and its pulled env file
+.vercel
+.env.local
