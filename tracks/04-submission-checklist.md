@@ -41,8 +41,8 @@ Everything required to submit, from build.qorechain.io rules and /start. There i
 - [x] Testnet transactions exist for: key registration, authenticator link, spending rule, `MsgExecuteEVM` via relayer, revoke, EVM window, agent action *(one explorer link per type in docs/testnet-evidence.md, Checklist coverage)*
 - [x] Transaction hashes listed in README with explorer links (https://explore.qore.network) *(docs/testnet-evidence.md, linked from README)*
 - [x] Only **Diana testnet** activity counts for checks
-- [ ] Deployed web app reachable (Vercel URL)
-- [ ] Relayer reachable and funded until at least 16 Dec (judging and demo show)
+- [x] Deployed web app reachable (Vercel URL) *(https://qoreconnect-web.vercel.app and https://qoreconnect-demo.vercel.app, 22 Nov)*
+- [ ] Relayer reachable and funded until at least 16 Dec (judging and demo show) *(blocked: Render returned 402 billing_suspended on 22 Nov)*
 - [ ] Sponsor and relayer balances topped up (faucet: once per 24 h per account; plan ahead)
 - [x] CI green on the default branch *(green on main, 22 Nov)*
 
