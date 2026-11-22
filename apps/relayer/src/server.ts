@@ -44,6 +44,25 @@ mkdirSync(dirname(dbPath), { recursive: true })
 const store = new RelayerStore(dbPath)
 const client = new QoreClient(net)
 
+// Hosts without a persistent disk (e.g. a free container plan) start with an empty database. BOOT_TANK=<id> creates that
+// gas tank on boot if it is missing (same defaults as `pnpm seed`); BOOT_TANK_CONTRACTS limits it to these contracts.
+const bootTank = process.env.BOOT_TANK?.trim()
+if (bootTank && !store.getTank(bootTank)) {
+  const allowed = (process.env.BOOT_TANK_CONTRACTS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter((a) => /^0x[0-9a-fA-F]{40}$/.test(a))
+  store.createTank({
+    id: bootTank,
+    name: 'Quantum Tip Jar (demo)',
+    owner: 'qoreconnect',
+    balanceUqor: BigInt(process.env.BOOT_TANK_BALANCE_UQOR ?? 50_000_000),
+    perUserDailyCapUqor: BigInt(process.env.BOOT_TANK_USER_DAILY_UQOR ?? 2_000_000),
+    allowedContracts: allowed.length ? allowed : undefined,
+  })
+  console.log(`created gas tank ${bootTank} on boot (allowed contracts: ${allowed.length ? allowed.join(', ') : 'any'})`)
+}
+
 const sponsor = new SponsorService(
   net,
   store,
