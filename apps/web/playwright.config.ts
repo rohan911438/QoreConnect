@@ -8,6 +8,8 @@ import { join } from 'node:path'
  */
 const RELAYER_PORT = 8788
 const WEB_PORT = 3100
+/** E2E_BASE_URL=https://… runs the same specs against a deployment (its own relayer); no local servers are started. */
+const BASE_URL = process.env.E2E_BASE_URL
 
 export default defineConfig({
   testDir: './e2e',
@@ -18,8 +20,8 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   // channel 'chromium' = full Chromium in new headless mode; PW_CHANNEL=msedge uses the installed Edge instead.
-  use: { baseURL: `http://localhost:${WEB_PORT}`, trace: 'retain-on-failure', ...devices['Desktop Chrome'], channel: process.env.PW_CHANNEL ?? 'chromium' },
-  webServer: [
+  use: { baseURL: BASE_URL ?? `http://localhost:${WEB_PORT}`, trace: 'retain-on-failure', ...devices['Desktop Chrome'], channel: process.env.PW_CHANNEL ?? 'chromium' },
+  webServer: BASE_URL ? [] : [
     {
       command: 'pnpm --filter @qoreconnect/relayer-app start',
       cwd: '../..',

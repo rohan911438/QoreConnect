@@ -3,7 +3,7 @@ import type { EncodeObject } from '@cosmjs/proto-signing'
 import { sha256 } from 'viem'
 import type { QoreNetwork } from '../config'
 import { QoreConnectError, classifyChainRefusal } from '../errors'
-import { getJson, HttpError, postJson, type FetchLike } from './http'
+import { getJson, HttpError, isTimeout, postJson, type FetchLike } from './http'
 
 /** Result of an included transaction, in the shape the SDK's execution decoders accept. */
 export interface TxResult {
@@ -52,7 +52,7 @@ export async function accountSequence(net: QoreNetwork, address: string, fetchIm
 
 /** Simulate signed tx bytes over REST and return gas used. */
 export async function simulateTx(net: QoreNetwork, txBytes: Uint8Array, fetchImpl?: FetchLike): Promise<number> {
-  const j = await postJson<any>(`${net.rest}/cosmos/tx/v1beta1/simulate`, { tx_bytes: b64(txBytes) }, fetchImpl)
+  const j = await postJson<any>(`${net.rest}/cosmos/tx/v1beta1/simulate`, { tx_bytes: b64(txBytes) }, fetchImpl, true)
   if (!j.gas_info) throw new QoreConnectError('TX_FAILED', { message: 'Simulation failed', detail: JSON.stringify(j).slice(0, 500) })
   return Number(j.gas_info.gas_used)
 }
@@ -71,7 +71,15 @@ export class RestBroadcaster implements Broadcaster {
   ) {}
 
   async broadcast(txBytes: Uint8Array): Promise<TxResult> {
-    const sub = await postJson<any>(`${this.net.rest}/cosmos/tx/v1beta1/txs`, { tx_bytes: b64(txBytes), mode: 'BROADCAST_MODE_SYNC' }, this.opts.fetch)
+    let sub: any
+    try {
+      sub = await postJson<any>(`${this.net.rest}/cosmos/tx/v1beta1/txs`, { tx_bytes: b64(txBytes), mode: 'BROADCAST_MODE_SYNC' }, this.opts.fetch)
+    } catch (e) {
+      // The node may have accepted the tx before the response was lost. Resending could fail even though it executes,
+      // so wait for it by its hash (sha256 of the bytes) instead; if it never appears, the caller can retry safely.
+      if (!isTimeout(e)) throw e
+      sub = { tx_response: { code: 0, txhash: txHashOf(txBytes) } }
+    }
     const tr = sub.tx_response
     if (!tr) throw new QoreConnectError('TX_FAILED', { detail: JSON.stringify(sub).slice(0, 500) })
     // Code 19 = "tx already in mempool/cache": a resend after a dropped connection. The first copy was accepted, so wait
