@@ -44,7 +44,7 @@ only once most EVM traffic already signs hybrid.
 | | Without QoreConnect | With QoreConnect | Source |
 |---|---|---|---|
 | Signatures for a MetaMask user's first transaction | not possible (no ML-DSA key in MetaMask) | 1 passkey tap + **1** MetaMask signature | [`prompts/STATUS.md`](prompts/STATUS.md) P09 |
-| Onboarding time, fresh browser to linked account | not possible | **35 s** (browser E2E on Diana) | P09 G1 |
+| Onboarding time, fresh browser to linked account | not possible | **19.8 s** on the live site (production browser E2E on Diana, 22 Nov 2026; 35 s at P09) | [`prompts/STATUS.md`](prompts/STATUS.md) P15 |
 | Loss if the MetaMask key is broken | everything the key controls | at most the daily limit, through approved contracts, until revoked | [`docs/security.md`](docs/security.md) T1 |
 | dApp integration | write your own relayer and key setup | one wagmi connector, **9 lines** | [`apps/demo-dapp/src/wagmi.ts`](apps/demo-dapp/src/wagmi.ts) |
 
