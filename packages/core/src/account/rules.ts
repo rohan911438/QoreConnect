@@ -93,6 +93,28 @@ export function mergeRemove(rules: Rule[], contracts: string[]): Rule[] {
   return place(rules, { ...m, allowedEvmCalls: ensureNonEmpty(withoutSentinel(calls)) })
 }
 
+/**
+ * Rules that let the linked key revoke an ERC-20 approval (approve(spender, 0)) on `token`. Diana refuses any token
+ * approval from a linked key unless the rule lists the token as an `erc20/0x…` denom (chain code 10) and the call target
+ * is allowed; amounts count against the rule's limits, so an unlimited approval is refused (code 5) while a revoke of 0
+ * passes (verified 22 Nov 2026, docs/security.md). Returns the same array when nothing needs to change.
+ */
+export function mergeRevokeCover(rules: Rule[], token: string): Rule[] {
+  const m = managedRule(rules)
+  if (!m) throw new Error('no QoreConnect rule on this account: link a key first')
+  const t = normaliseCall(token)
+  const denom = `erc20/${t}`
+  const calls = withoutSentinel(m.allowedEvmCalls)
+  const callOk = calls.some((c) => c === t || c === `${t}/0x095ea7b3`)
+  const denomOk = m.allowedDenoms.some((d) => d.toLowerCase() === denom)
+  if (callOk && denomOk) return rules
+  return place(rules, {
+    ...m,
+    allowedEvmCalls: callOk ? m.allowedEvmCalls : ensureNonEmpty([...calls, `${t}/0x095ea7b3`]),
+    allowedDenoms: denomOk ? m.allowedDenoms : [...m.allowedDenoms, denom],
+  })
+}
+
 /** Change limits on the managed rule only. */
 export function mergeLimits(rules: Rule[], limits: Limits): Rule[] {
   const m = managedRule(rules)

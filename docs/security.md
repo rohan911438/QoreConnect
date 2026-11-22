@@ -92,6 +92,19 @@ and viem's optional `abitype` → `zod@3` peer. None reaches the relayer or the 
 | `uuid` <11.1.1 | moderate | demo dApp → wagmi connectors → @metamask/utils | Overridden to 11.1.1 |
 | `zod` <4.6.6 | high | demo dApp → viem → abitype (optional `abitype/zod` entry, never imported) | Accepted: not loaded at runtime. The relayer, which validates untrusted input, uses zod 4.6.7. |
 
+## Token approvals (P15, verified on Diana 22 Nov 2026)
+
+Test token: QCT `0x1a219d5b…d9f0` (testnet only, `contracts/src/TestToken.sol`, deploy tx [`0x2d2786e1…ed5c`](https://explore.qore.network/tx/0x2d2786e1f8100dfbad71385e38ccdaf6d4efc8bb9de422f8a3634d5f36e4ed5c)). Test: `packages/relayer/test/integration/approvals.test.ts`.
+
+| Fact | Evidence |
+| --- | --- |
+| A linked MetaMask key cannot approve a token the spending rule does not list as an `erc20/0x…` denom, even when the contract is on the allow-list (chain code 10) | [`0F142197…2D30`](https://explore.qore.network/tx/0F142197C0728BE2E1D4256ED8CBF8023D0939DDE27BC5A618D0FBF446AC2D30) |
+| With the denom listed, the approved amount counts against the rule's limits: 500,000 base units passed, an unlimited approval (2^256 − 1) was refused (code 5, per-tx limit) | passed [`7B32CF67…1D99`](https://explore.qore.network/tx/7B32CF670C4F2528F980222DB2863377D6EDD60D27017A691A3FF67D7D881D99), refused [`230A13D0…CBE8`](https://explore.qore.network/tx/230A13D0503235F21B89560D65D2B6FC30EFDE109F9F4F000D4787156FC2CBE8) |
+| A revoke (`approve(spender, 0)`) passes once the token is covered | [`0E0E989F…8478`](https://explore.qore.network/tx/0E0E989F393FC1CAB0A1877FA498CA04A2E462CFCE769C57621414612F7C8478) |
+| Calls run through `MsgExecuteEVM` do not appear in `eth_getLogs`: the allowance existed (`allowance()` returned 500,000) but no Approval log was returned for the token | checked with `eth_getLogs` on the token address over the last 3,000 blocks |
+
+Consequences: a stolen MetaMask key cannot hand a drainer an unlimited allowance through QoreConnect. The approval scanner (`GET /v1/approvals/:address`, account page) therefore combines the relayer's own record of relayed approvals with an `eth_getLogs` scan, and checks each against the live `allowance()`. The relayer's record is lost when a free-plan host restarts, so approvals made through another relayer, or before a restart, can be missed; the page says so. Revoking `setApprovalForAll` operators is not verified on Diana yet, so the page lists them without a revoke button.
+
 ## Known limitations
 
 - The MetaMask key is classical. It is capped, scoped and revocable, not quantum-safe.

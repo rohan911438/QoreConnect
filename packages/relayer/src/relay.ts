@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { approvalInCalldata } from './approvals'
 import { createPublicClient, http, recoverMessageAddress, type Hex } from 'viem'
 import { decodeAuthenticatorExecutions, evmAuthSignBytesV2, qorToEvm, type UnifiedAccount } from '@qorechain/sdk'
 import type { EncodeObject } from '@cosmjs/proto-signing'
@@ -280,6 +281,10 @@ export class RelayService {
       ip,
     })
     if (success) this.store.recordMeterEvent('relayed', r.account, res.transactionHash)
+    if (success) {
+      const a = approvalInCalldata(r.data)
+      if (a) this.store.recordApprovalCandidate({ owner: qorToEvm(r.account), token: r.to, spender: a.spender, kind: a.kind, txHash: res.transactionHash })
+    }
     return {
       status: 200,
       body: {

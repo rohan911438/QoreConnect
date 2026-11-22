@@ -137,6 +137,9 @@ test('landing → onboard → dashboard shows the key → revoke all → none', 
   await expect(page.getByTestId('preset-cautious')).toContainText('current')
   await expect(page.getByTestId('damage-cap')).toContainText('1 QOR per day')
 
+  // 3d. Approval scanner: a fresh account has granted nothing.
+  await expect(page.getByTestId('no-approvals')).toBeVisible({ timeout: 120_000 })
+
   // 4. Q-Day kill switch
   await page.getByTestId('kill-switch').click()
   // The root may still be unlocked from onboarding (5-minute auto-lock); otherwise the password prompt appears.

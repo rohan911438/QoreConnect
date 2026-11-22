@@ -21,6 +21,7 @@ import {
   mergeForLink,
   mergeLimits,
   mergeRemove,
+  mergeRevokeCover,
   toRuleInput,
   type Limits,
   type Rule,
@@ -186,6 +187,19 @@ export async function approveDapp(ctx: AccountContext & { contracts: string[] })
   const { client } = parts(ctx)
   const rules = mergeApprove(await client.getSpendingRules(ctx.root.qorAddress), ctx.contracts)
   return writeAndCheck(ctx, [updateRulesMsg(ctx.root.qorAddress, rules)])
+}
+
+/**
+ * Make sure the linked key may revoke an ERC-20 approval on `token` (see mergeRevokeCover). One root-signed write if the
+ * rule does not cover it yet; none otherwise. The revoke itself is then an ordinary relayed approve(spender, 0).
+ */
+export async function prepareTokenRevoke(ctx: AccountContext & { token: string }) {
+  const { client } = parts(ctx)
+  const before = await client.getSpendingRules(ctx.root.qorAddress)
+  const rules = mergeRevokeCover(before, ctx.token)
+  if (rules === before) return { changed: false as const }
+  const r = await writeAndCheck(ctx, [updateRulesMsg(ctx.root.qorAddress, rules)])
+  return { ...r, changed: true as const }
 }
 
 /** Remove one dApp's contracts only. */

@@ -27,6 +27,7 @@ import {
 import { UnlockPrompt } from '@qoreconnect/react'
 import { ConnectButton } from '../../components/ConnectButton'
 import { AgentsPanel } from '../../components/AgentsPanel'
+import { ApprovalsPanel } from '../../components/ApprovalsPanel'
 import { PageHeader } from '../../components/PageHeader'
 import { CONTRACT_NAMES, RECOVERY_PROMPT_UQOR, RELAYER_URL, qore } from '../../lib/qore'
 import { timeLeft } from '../../lib/time'
@@ -557,6 +558,14 @@ export default function AccountPage() {
               </ul>
             )}
           </Card>
+
+          <ApprovalsPanel
+            net={net}
+            account={info.qorAddress}
+            evmAddress={info.evmAddress}
+            busy={!!busy}
+            rootAction={rootAction}
+          />
 
           {rule && (
             <LimitsEditor

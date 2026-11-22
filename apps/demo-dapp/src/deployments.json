@@ -20,6 +20,13 @@
       "address": "0x1a5b03240e7b3ce11fb8e59ef5da1cb60fbe9eab",
       "tx": "0x8ae533d1811a4f093ac06208b3bfdc65b2d8f98940e87e694eccf2c43669eca5",
       "codeBytes": 3091
+    },
+    "TestToken": {
+      "address": "0x1a219d5bdf5887678d558feca0186b367393d9f0",
+      "tx": "0x2d2786e1f8100dfbad71385e38ccdaf6d4efc8bb9de422f8a3634d5f36e4ed5c",
+      "block": 10554497,
+      "codeBytes": 1688,
+      "symbol": "QCT"
     }
   }
 }

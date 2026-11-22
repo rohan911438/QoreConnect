@@ -70,10 +70,32 @@ export class RelayerStore {
       );
       CREATE TABLE IF NOT EXISTS meter_snapshots (ts INTEGER PRIMARY KEY, data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS meter_evidence (id INTEGER PRIMARY KEY CHECK (id = 1), ts INTEGER NOT NULL, data TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS approval_candidates (
+        owner TEXT NOT NULL, token TEXT NOT NULL, spender TEXT NOT NULL, kind TEXT NOT NULL, tx_hash TEXT, created_at INTEGER NOT NULL,
+        PRIMARY KEY (owner, token, spender, kind)
+      );
     `)
     // Migrations for databases created by earlier versions.
     const cols = (this.db.prepare('PRAGMA table_info(relays)').all() as { name: string }[]).map((c) => c.name)
     if (!cols.includes('value_uqor')) this.db.exec('ALTER TABLE relays ADD COLUMN value_uqor TEXT')
+  }
+
+  /**
+   * Approvals granted through relayed calls. Diana does not publish logs of EVM calls run through MsgExecuteEVM to
+   * eth_getLogs (verified 22 Nov 2026), so the relayer remembers them; the scanner checks each against the live state.
+   */
+  recordApprovalCandidate(c: { owner: string; token: string; spender: string; kind: 'erc20' | 'operator'; txHash?: string }, now = Date.now()) {
+    this.db
+      .prepare(
+        'INSERT INTO approval_candidates (owner, token, spender, kind, tx_hash, created_at) VALUES (?, ?, ?, ?, ?, ?) ' +
+          'ON CONFLICT(owner, token, spender, kind) DO UPDATE SET tx_hash = excluded.tx_hash, created_at = excluded.created_at',
+      )
+      .run(c.owner.toLowerCase(), c.token.toLowerCase(), c.spender.toLowerCase(), c.kind, c.txHash ?? null, now)
+  }
+
+  approvalCandidates(owner: string): { token: string; spender: string; kind: 'erc20' | 'operator'; txHash: string | null; createdAt: number }[] {
+    const rows = this.db.prepare('SELECT token, spender, kind, tx_hash, created_at FROM approval_candidates WHERE owner = ?').all(owner.toLowerCase()) as any[]
+    return rows.map((r) => ({ token: r.token, spender: r.spender, kind: r.kind, txHash: r.tx_hash, createdAt: r.created_at }))
   }
 
   /** Record a hit in a rate-limit bucket if fewer than `max` happened within `windowMs`. Returns false when limited. */

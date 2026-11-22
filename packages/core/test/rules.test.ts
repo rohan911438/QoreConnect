@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_LIMITS,
+  mergeRevokeCover,
   MANAGED_RULE_ID,
   NO_DAPP_SENTINEL,
   assertRuleInvariants,
@@ -119,5 +120,26 @@ describe('re-linking keeps limits (P15 renew)', () => {
       perTxLimit: 3n,
       dailyLimit: 9n,
     })
+  })
+})
+
+describe('revoke cover (P15 approvals)', () => {
+  const T = '0x1A219D5bdF5887678d558fECA0186b367393D9F0'
+  it('adds the approve function and the erc20 denom when missing, nothing else', () => {
+    const base = mergeForLink([], [A])
+    const r = mergeRevokeCover(base, T)
+    expect(r[0]!.allowedEvmCalls).toEqual([A, `${T.toLowerCase()}/0x095ea7b3`])
+    expect(r[0]!.allowedDenoms).toEqual(['uqor', `erc20/${T.toLowerCase()}`])
+    expect(r[0]!.perTxLimit).toBe(base[0]!.perTxLimit)
+  })
+  it('returns the same rules when the token is already covered', () => {
+    const covered = mergeRevokeCover(mergeForLink([], [A]), T)
+    expect(mergeRevokeCover(covered, T)).toBe(covered)
+    const bare = mergeLimits(mergeForLink([], [A, T]), {
+      perTxUqor: 1n,
+      dailyUqor: 2n,
+      denoms: ['uqor', `erc20/${T.toLowerCase()}`],
+    })
+    expect(mergeRevokeCover(bare, T)).toBe(bare)
   })
 })

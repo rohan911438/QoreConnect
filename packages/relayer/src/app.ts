@@ -9,6 +9,8 @@ import { timingSafeEqual } from 'node:crypto'
 import { meterHeadline, meterPoint, type MeterIndexer } from './meter'
 import { DoctorInputError, runDoctor } from './doctor'
 import { runExposure, type ExposureChain } from './exposure'
+import { ApprovalScanner, jsonRpc } from './approvals'
+import { normaliseAccount } from './doctor'
 
 export interface RelayerDeps {
   net: QoreNetwork
@@ -30,6 +32,8 @@ export interface RelayerDeps {
   corsOrigins?: string[]
   /** Migration Meter indexer (enables POST /v1/meter/refresh). */
   meter?: MeterIndexer
+  /** Approval scanner (tests inject one with a fake RPC). */
+  approvals?: ApprovalScanner
   /** /health reports an alert when the relayer or sponsor balance is below this (default 2 QOR). */
   lowBalanceUqor?: bigint
 }
@@ -267,6 +271,20 @@ export function createRelayerApp(d: RelayerDeps) {
     if (!d.store.hit(`exposure:${clientIp(c)}`, 30, 60_000)) return c.json({ error: 'slow down' }, 429)
     try {
       return c.json(await runExposure(exposureChain, { address: c.req.param('address') }))
+    } catch (e) {
+      if (e instanceof DoctorInputError) return c.json({ error: e.message }, 400)
+      return c.json({ error: `chain query failed: ${(e as Error).message}` }, 502)
+    }
+  })
+
+  // ---- Approval scanner ----
+  const approvals =
+    d.approvals ?? new ApprovalScanner(jsonRpc(d.net.evmRpc), { known: (o) => d.store.approvalCandidates(o) })
+  app.get('/v1/approvals/:address', async (c) => {
+    if (!d.store.hit(`approvals:${clientIp(c)}`, 10, 60_000)) return c.json({ error: 'slow down' }, 429)
+    try {
+      const { evmAddress } = normaliseAccount(c.req.param('address'))
+      return c.json(await approvals.scan(evmAddress))
     } catch (e) {
       if (e instanceof DoctorInputError) return c.json({ error: e.message }, 400)
       return c.json({ error: `chain query failed: ${(e as Error).message}` }, 502)

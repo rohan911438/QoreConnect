@@ -35,6 +35,11 @@ only once most EVM traffic already signs hybrid.
    root has signed with ML-DSA-87, so prompt injection cannot spend your money.
 7. **Migration Meter and Doctor.** A public page measures how much of QoreChain's EVM activity has a post-quantum root,
    and a Doctor diagnoses any account in one click.
+8. **Account services.** A shareable Q-Day exposure report grades any address from live chain state; limit presets
+   (Cautious, Everyday, Agent, Gaming) explain in plain English what a key can and cannot do; a countdown warns before
+   the MetaMask key expires and renews it with one tap, keeping your limits; an approval scanner lists live token
+   allowances and revokes them. On Diana the chain counts token approvals against your limits, so a linked key cannot
+   grant an unlimited one ([evidence](docs/security.md#token-approvals-p15-verified-on-diana-22-nov-2026)).
 
 | | Without QoreConnect | With QoreConnect | Source |
 |---|---|---|---|
