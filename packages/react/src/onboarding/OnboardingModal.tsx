@@ -36,11 +36,23 @@ type StepId = 'key' | 'sign' | 'sponsor' | 'register' | 'link'
 type StepState = 'pending' | 'active' | 'done'
 
 const STEPS: { id: StepId; label: string; help: string }[] = [
-  { id: 'key', label: 'Create your quantum-safe key', help: 'ML-DSA-87, protected by your passkey. It never leaves this device.' },
+  {
+    id: 'key',
+    label: 'Create your quantum-safe key',
+    help: 'ML-DSA-87, protected by your passkey. It never leaves this device.',
+  },
   { id: 'sign', label: 'Sign once in MetaMask', help: 'Proves this MetaMask belongs to you. Costs nothing.' },
   { id: 'sponsor', label: 'Sponsor your first fees', help: 'QoreConnect pays the setup fees on Diana testnet.' },
-  { id: 'register', label: 'Register the quantum-safe key on QoreChain', help: 'Your root account now holds a post-quantum key.' },
-  { id: 'link', label: 'Link MetaMask as a capped key', help: 'Classical, capped: limited spend, approved contracts only, revocable.' },
+  {
+    id: 'register',
+    label: 'Register the quantum-safe key on QoreChain',
+    help: 'Your root account now holds a post-quantum key.',
+  },
+  {
+    id: 'link',
+    label: 'Link MetaMask as a capped key',
+    help: 'Classical, capped: limited spend, approved contracts only, revocable.',
+  },
 ]
 
 const STEP_OF: Partial<Record<FlowEvent['step'], [StepId, StepState]>> = {
@@ -60,18 +72,40 @@ const STEP_OF: Partial<Record<FlowEvent['step'], [StepId, StepState]>> = {
 
 const fmt = (ms: number) => `${(ms / 1000).toFixed(1)} s`
 
+/** After this long without progress, tell the user the testnet is slow (so the window does not look frozen). */
+const SLOW_AFTER_MS = 12_000
+/** Timeouts and network errors are retried automatically this many times before the user sees an error. */
+const AUTO_RETRIES = 2
+/** Chain or network hiccups are worth retrying; a rejected signature or a refused transaction is not. */
+export const isTransient = (e: unknown): boolean => {
+  const text = `${(e as any)?.code ?? ''} ${(e as any)?.name ?? ''} ${(e as Error)?.message ?? e}`
+  return (
+    !/REJECT|DENIED|LIMIT|INSUFFICIENT|UNAUTHORI/i.test(text) &&
+    /timed? ?out|TimeoutError|network|fetch failed|not included in time|HTTP 5\d\d|ECONNRESET/i.test(text)
+  )
+}
+
 /**
  * Flow A: one explanation screen → passkey → progress (sponsor, register, link) with ONE MetaMask signature → done.
  * Every failure shows a clear message and a Retry that resumes where it stopped.
  */
 export function OnboardingModal(p: OnboardingModalProps) {
   const [phase, setPhase] = useState<'intro' | 'running' | 'error' | 'done'>('intro')
-  const [steps, setSteps] = useState<Record<StepId, StepState>>({ key: 'pending', sign: 'pending', sponsor: 'pending', register: 'pending', link: 'pending' })
+  const [steps, setSteps] = useState<Record<StepId, StepState>>({
+    key: 'pending',
+    sign: 'pending',
+    sponsor: 'pending',
+    register: 'pending',
+    link: 'pending',
+  })
   const [error, setError] = useState<string>()
   const [existing, setExisting] = useState<{ qorAddress: string; kdf: string } | null>(null)
   const [usePassword, setUsePassword] = useState(!!p.forcePassword)
   const [password, setPassword] = useState('')
   const [elapsed, setElapsed] = useState(0)
+  const [slow, setSlow] = useState(false)
+  const lastProgress = useRef(0)
+  const autoRetries = useRef(0)
   const [result, setResult] = useState<{ root: RootSigner; ms: number }>()
   const t0 = useRef<number>(0)
   const root = useRef<RootSigner | undefined>(undefined)
@@ -85,12 +119,19 @@ export function OnboardingModal(p: OnboardingModalProps) {
   }, [p.vault, p.forcePassword])
 
   useEffect(() => {
+    if (phase !== 'running') return setSlow(false)
+    const id = setInterval(() => setSlow(Date.now() - lastProgress.current > SLOW_AFTER_MS), 1000)
+    return () => clearInterval(id)
+  }, [phase])
+
+  useEffect(() => {
     if (phase !== 'running' || !p.showTimer) return
     const id = setInterval(() => setElapsed(Date.now() - t0.current), 100)
     return () => clearInterval(id)
   }, [phase, p.showTimer])
 
-  const protection = (): Protection => (usePassword ? { kind: 'password', password } : { kind: 'passkey', passkey: passkey.current })
+  const protection = (): Protection =>
+    usePassword ? { kind: 'password', password } : { kind: 'passkey', passkey: passkey.current }
   const passwordNeeded = existing ? existing.kdf === 'scrypt' : usePassword
   const canStart = !passwordNeeded || password.length >= 8
 
@@ -98,11 +139,13 @@ export function OnboardingModal(p: OnboardingModalProps) {
     if (!t0.current) t0.current = Date.now()
     setPhase('running')
     setError(undefined)
+    lastProgress.current = Date.now()
     try {
       if (!root.current) {
         if (existing) {
           setSteps((s) => ({ ...s, key: 'active' }))
-          const prot: Protection = existing.kdf === 'scrypt' ? { kind: 'password', password } : { kind: 'passkey', passkey: passkey.current }
+          const prot: Protection =
+            existing.kdf === 'scrypt' ? { kind: 'password', password } : { kind: 'passkey', passkey: passkey.current }
           root.current = await p.vault.unlock(prot)
         }
       }
@@ -118,6 +161,8 @@ export function OnboardingModal(p: OnboardingModalProps) {
         limits: p.limits,
         linkProof: proof.current,
         onEvent: (e) => {
+          lastProgress.current = Date.now()
+          setSlow(false)
           if (e.step === 'created') {
             if (!root.current) setSteps((s) => ({ ...s, key: 'done' }))
             if (e.root) root.current = e.root
@@ -135,7 +180,20 @@ export function OnboardingModal(p: OnboardingModalProps) {
       setResult({ root: r.root, ms })
       setPhase('done')
     } catch (e) {
-      setSteps((s) => Object.fromEntries(Object.entries(s).map(([k, v]) => [k, v === 'active' ? 'pending' : v])) as Record<StepId, StepState>)
+      // Resume automatically after a testnet hiccup; completed steps (and the MetaMask signature) are kept.
+      if (isTransient(e) && autoRetries.current < AUTO_RETRIES) {
+        autoRetries.current++
+        await new Promise((r) => setTimeout(r, 1500))
+        return run()
+      }
+      autoRetries.current = 0
+      setSteps(
+        (s) =>
+          Object.fromEntries(Object.entries(s).map(([k, v]) => [k, v === 'active' ? 'pending' : v])) as Record<
+            StepId,
+            StepState
+          >,
+      )
       setError(e instanceof QoreConnectError ? e.message : e instanceof Error ? e.message : String(e))
       setPhase('error')
     }
@@ -173,10 +231,12 @@ export function OnboardingModal(p: OnboardingModalProps) {
       >
         <ul className="qc-list">
           <li>
-            <strong>Quantum-safe root.</strong> A post-quantum key (ML-DSA-87) controls your account. It stays on this device.
+            <strong>Quantum-safe root.</strong> A post-quantum key (ML-DSA-87) controls your account. It stays on this
+            device.
           </li>
           <li>
-            <strong>MetaMask convenience.</strong> MetaMask keeps signing, as a classical key with limits: approved contracts only, a daily cap, revocable in one step.
+            <strong>MetaMask convenience.</strong> MetaMask keeps signing, as a classical key with limits: approved
+            contracts only, a daily cap, revocable in one step.
           </li>
           <li>
             <strong>No gas to buy.</strong> Fees are sponsored on Diana testnet.
@@ -184,8 +244,17 @@ export function OnboardingModal(p: OnboardingModalProps) {
         </ul>
         {passwordNeeded && (
           <label className="qc-field">
-            <span>{existing ? 'Password for your quantum-safe key' : 'This browser has no passkey support. Choose a password (8+ characters).'}</span>
-            <input type="password" autoComplete={existing ? 'current-password' : 'new-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <span>
+              {existing
+                ? 'Password for your quantum-safe key'
+                : 'This browser has no passkey support. Choose a password (8+ characters).'}
+            </span>
+            <input
+              type="password"
+              autoComplete={existing ? 'current-password' : 'new-password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </label>
         )}
       </Modal>
@@ -201,7 +270,12 @@ export function OnboardingModal(p: OnboardingModalProps) {
         description={`Your account has a quantum-safe root and MetaMask is linked as a capped key${p.showTimer ? `, in ${fmt(result.ms)}` : ''}.`}
         initialFocus={primary}
         actions={
-          <button ref={primary} type="button" className="qc-btn qc-primary" onClick={() => p.onDone(result.root, result.ms)}>
+          <button
+            ref={primary}
+            type="button"
+            className="qc-btn qc-primary"
+            onClick={() => p.onDone(result.root, result.ms)}
+          >
             Continue to {p.appName}
           </button>
         }
@@ -253,7 +327,11 @@ export function OnboardingModal(p: OnboardingModalProps) {
       {timer}
       <ol className="qc-steps" aria-label="Progress">
         {STEPS.map((s) => (
-          <li key={s.id} className={`qc-step qc-step-${steps[s.id]}`} aria-current={steps[s.id] === 'active' ? 'step' : undefined}>
+          <li
+            key={s.id}
+            className={`qc-step qc-step-${steps[s.id]}`}
+            aria-current={steps[s.id] === 'active' ? 'step' : undefined}
+          >
             <span className="qc-dot" aria-hidden="true">
               {steps[s.id] === 'done' ? '✓' : ''}
             </span>
@@ -265,6 +343,11 @@ export function OnboardingModal(p: OnboardingModalProps) {
           </li>
         ))}
       </ol>
+      {phase === 'running' && slow && (
+        <p role="status" className="qc-slow" data-testid="qc-slow">
+          QoreChain Diana testnet is responding slowly. Still working, no need to retry.
+        </p>
+      )}
       {phase === 'error' && (
         <p role="alert" className="qc-error">
           {error} Retry continues from the last completed step.

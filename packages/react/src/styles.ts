@@ -49,6 +49,7 @@ export const EXTRA_STYLES = `
 .qc-step-done .qc-dot{background:var(--qc-ok);border-color:var(--qc-ok);color:var(--qc-bg)}
 .qc-step-pending{opacity:.65}
 .qc-timer{margin:8px 0 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}
+.qc-slow{margin:12px 0 0;padding:10px 12px;border-radius:10px;color:var(--qc-warn);background:var(--qc-warn-bg)}
 .qc-error{margin:12px 0 0;padding:10px 12px;border-radius:10px;color:var(--qc-bad);background:var(--qc-bad-bg)}
 .qc-btn:disabled{opacity:.55;cursor:not-allowed}
 .qc-warn-chip{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;color:var(--qc-bad);background:var(--qc-bad-bg)}
