@@ -10,6 +10,7 @@ import { meterHeadline, meterPoint, type MeterIndexer } from './meter'
 import { DoctorInputError, runDoctor } from './doctor'
 import { runExposure, type ExposureChain } from './exposure'
 import { ApprovalScanner, jsonRpc } from './approvals'
+import { RelayedApprovalIndex, restPages } from './executions'
 import { normaliseAccount } from './doctor'
 
 export interface RelayerDeps {
@@ -34,6 +35,8 @@ export interface RelayerDeps {
   meter?: MeterIndexer
   /** Approval scanner (tests inject one with a fake RPC). */
   approvals?: ApprovalScanner
+  /** Chain index of approvals made through relayed calls (server.ts builds and warms it on boot). */
+  approvalIndex?: RelayedApprovalIndex
   /** /health reports an alert when the relayer or sponsor balance is below this (default 2 QOR). */
   lowBalanceUqor?: bigint
 }
@@ -278,8 +281,27 @@ export function createRelayerApp(d: RelayerDeps) {
   })
 
   // ---- Approval scanner ----
+  // Relayed approvals come from the chain's own tx search (survives restarts, covers every relayer). This relayer's
+  // record only bridges the seconds before a brand-new tx becomes searchable.
+  const approvalIndex = d.approvalIndex ?? new RelayedApprovalIndex(restPages(d.net.rest))
   const approvals =
-    d.approvals ?? new ApprovalScanner(jsonRpc(d.net.evmRpc), { known: (o) => d.store.approvalCandidates(o) })
+    d.approvals ??
+    new ApprovalScanner(jsonRpc(d.net.evmRpc), {
+      known: async (o) => {
+        const ok = await approvalIndex.refresh().then(
+          () => true,
+          () => false,
+        )
+        const seen = new Set<string>()
+        const candidates = [...approvalIndex.known(o), ...d.store.approvalCandidates(o)].filter((k) => {
+          const key = `${k.kind}:${k.token}:${k.spender}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        return { candidates, complete: ok && approvalIndex.ready, historyFrom: approvalIndex.historyFrom }
+      },
+    })
   app.get('/v1/approvals/:address', async (c) => {
     if (!d.store.hit(`approvals:${clientIp(c)}`, 10, 60_000)) return c.json({ error: 'slow down' }, 429)
     try {

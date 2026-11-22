@@ -8,8 +8,9 @@
  *
  * Coverage (stated in every result): Diana's EVM RPC answers eth_getLogs for at most 10,000 blocks per query (measured
  * 22 Nov 2026) and there is no indexer API, so the scan starts at `fromBlock` (default: about 1 Nov 2026) and is cached
- * per owner and extended incrementally. ERC-721 single-token approvals are not listed (only ERC-20 allowances and
- * setApprovalForAll operators).
+ * per owner and extended incrementally. Calls run through QoreConnect keys (MsgExecuteEVM) leave no log there, so they
+ * come in through `known` (see executions.ts, which reads them from the chain's tx search). ERC-721 single-token
+ * approvals are not listed (only ERC-20 allowances and setApprovalForAll operators).
  */
 
 import type { ApprovalKind } from '@qoreconnect/core'
@@ -51,6 +52,13 @@ export interface ApprovalScan {
   scannedTo: number
   coverage: string
   checkedAt: number
+}
+
+export interface KnownResult {
+  candidates: { token: string; spender: string; kind: Approval['kind']; txHash: string | null }[]
+  complete: boolean
+  /** Relayed calls are readable from this block on (the node prunes older history); 0 or absent = all. */
+  historyFrom?: number
 }
 
 interface Candidate {
@@ -126,8 +134,11 @@ export class ApprovalScanner {
       fromBlock?: number
       concurrency?: number
       now?: () => number
-      /** Approvals known from relayed calls (their logs are not in eth_getLogs). */
-      known?: (owner: string) => { token: string; spender: string; kind: Approval['kind']; txHash: string | null }[]
+      /**
+       * Approvals known from relayed calls (their logs are not in eth_getLogs). `complete` says whether the whole
+       * chain history of relayed calls was read; it decides the coverage sentence.
+       */
+      known?: (owner: string) => KnownResult | Promise<KnownResult>
     } = {},
   ) {}
 
@@ -185,7 +196,8 @@ export class ApprovalScanner {
       entry.to = latest
     }
 
-    for (const k of this.opts.known?.(owner) ?? []) {
+    const known = this.opts.known ? await this.opts.known(owner) : undefined
+    for (const k of known?.candidates ?? []) {
       const key = `${k.kind}:${k.token}:${k.spender}`
       if (!entry.candidates.has(key))
         entry.candidates.set(key, {
@@ -238,7 +250,15 @@ export class ApprovalScanner {
       closed: entry.candidates.size - approvals.length,
       scannedFrom: fromBlock,
       scannedTo: entry.to,
-      coverage: `Approvals granted through this relayer, plus Approval and ApprovalForAll events from block ${fromBlock.toLocaleString('en-US')} (about 1 Nov 2026) to ${entry.to.toLocaleString('en-US')}; each is checked against the current allowance. Diana does not publish logs of calls run through QoreConnect keys, and this relayer forgets its records when it restarts, so approvals made through another relayer may be missing. ERC-721 single-token approvals are not listed.`,
+      coverage: `${
+        known?.complete
+          ? known.historyFrom
+            ? `Every approval made through QoreConnect on any relayer since block ${known.historyFrom.toLocaleString('en-US')} (read from all MsgExecuteEVM transactions the node still keeps; older blocks are pruned)`
+            : 'Every approval made through QoreConnect on any relayer (read from all MsgExecuteEVM transactions on the chain)'
+          : known
+            ? "Approvals made through QoreConnect that could be read so far (the chain's transaction search did not answer in full: scan again to retry)"
+            : 'Approvals made through QoreConnect are not included'
+      }, plus Approval and ApprovalForAll events from block ${fromBlock.toLocaleString('en-US')} (about 1 Nov 2026) to ${entry.to.toLocaleString('en-US')}. Each is checked against the current allowance. ERC-721 single-token approvals are not listed.`,
       checkedAt: this.opts.now?.() ?? Date.now(),
     }
   }

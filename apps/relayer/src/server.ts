@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { serve } from '@hono/node-server'
 import { DIANA, QoreClient, type QoreNetwork } from '@qoreconnect/core'
-import { ChainFundsSender, ChainRelay, ensurePqcRegistered, DEFAULT_SPONSOR, MeterIndexer, RelayService, RelayerStore, RpcEvmSampler, SponsorService, createRelayerApp, operatorAccount } from '@qoreconnect/relayer'
+import { ChainFundsSender, ChainRelay, ensurePqcRegistered, DEFAULT_SPONSOR, MeterIndexer, RelayService, RelayerStore, RpcEvmSampler, SponsorService, createRelayerApp, operatorAccount, RelayedApprovalIndex, restPages } from '@qoreconnect/relayer'
 
 // Load the repo-root .env first, then a local one (local wins).
 config({ path: resolve(import.meta.dirname, '../../../.env') })
@@ -103,7 +103,15 @@ const meter = meterInterval > 0
     )
   : undefined
 
+// Approvals made through QoreConnect are rebuilt from the chain's tx search, so a restart loses nothing; warm it now.
+const approvalIndex = new RelayedApprovalIndex(restPages(net.rest))
+approvalIndex.refresh().then(
+  () => console.log(`approval index ready: ${approvalIndex.ready}`),
+  (e) => console.warn(`approval index: first build failed (${(e as Error).message}); retried on the next scan`),
+)
+
 const app = createRelayerApp({
+  approvalIndex,
   meter,
   net,
   store,

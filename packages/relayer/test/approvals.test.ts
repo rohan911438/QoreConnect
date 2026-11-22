@@ -8,6 +8,8 @@ import {
   revokeCalldata,
   type EvmRpc,
 } from '../src/approvals'
+import { RelayedApprovalIndex, calldataHex, type PageSource } from '../src/executions'
+import { evmToQor } from '@qorechain/sdk'
 
 const OWNER = '0x7073d2f627b3d9f9512cc2a587a75a2bab0c34f1'
 const TOKEN = '0x1a219d5bdf5887678d558feca0186b367393d9f0'
@@ -161,9 +163,113 @@ describe('approvals known from relayed calls', () => {
       expect.objectContaining({ token: TOKEN, spender: SPENDER, kind: 'erc20', txHash: 'B' }),
     ])
     const f = fakeRpc({ latest: 100_010, logs: [], allowance: { [`${TOKEN}:${SPENDER}`]: 7n } })
-    const r = await new ApprovalScanner(f.rpc, { fromBlock: 100_000, known: (o) => store.approvalCandidates(o) }).scan(
-      OWNER,
-    )
+    const r = await new ApprovalScanner(f.rpc, {
+      fromBlock: 100_000,
+      known: (o) => ({ candidates: store.approvalCandidates(o), complete: true }),
+    }).scan(OWNER)
     expect(r.approvals).toEqual([expect.objectContaining({ token: TOKEN, spender: SPENDER, amount: '7', lastTx: 'B' })])
+    expect(r.coverage).toContain('on any relayer')
+  })
+
+  it('says so when the chain history of relayed calls could not be read in full', async () => {
+    const f = fakeRpc({ latest: 100_010, logs: [], allowance: {} })
+    const r = await new ApprovalScanner(f.rpc, {
+      fromBlock: 100_000,
+      known: async () => ({ candidates: [], complete: false }),
+    }).scan(OWNER)
+    expect(r.coverage).toContain('scan again to retry')
+  })
+})
+
+describe('relayed approval index (chain tx search)', () => {
+  // OWNER as a qor1 address, as MsgExecuteEVM carries it.
+  const ACCOUNT = evmToQor(OWNER)
+  const approveB64 = (spender: string, v: bigint) =>
+    Buffer.from('095ea7b3' + pad(spender).slice(2) + u256(v).slice(2), 'hex').toString('base64')
+  const tx = (n: number, data: string, to = TOKEN, account = ACCOUNT) => ({
+    txhash: `H${n}`,
+    height: n,
+    msgs: [{ account, to, data }],
+  })
+
+  function source(all: ReturnType<typeof tx>[]) {
+    const calls: number[] = []
+    const pages: PageSource = async (page, limit) => {
+      calls.push(page)
+      const sorted = [...all].sort((a, b) => b.height - a.height)
+      return { total: sorted.length, txs: sorted.slice((page - 1) * limit, page * limit) }
+    }
+    return { pages, calls }
+  }
+
+  it('decodes base64 calldata and keeps approvals per owner, ignoring revokes and other calls', () => {
+    expect(calldataHex(Buffer.from('d09de08a', 'hex').toString('base64'))).toBe('0xd09de08a')
+    expect(calldataHex('0xABCD')).toBe('0xabcd')
+  })
+
+  it('first build reads every page; later refreshes stop at the first known tx', async () => {
+    const all = Array.from({ length: 250 }, (_, i) => tx(i + 1, Buffer.from('d09de08a', 'hex').toString('base64')))
+    all[10] = tx(11, approveB64(SPENDER, 5n))
+    all[200] = tx(201, approveB64(OTHER, 0n)) // a revoke: not an approval
+    const s = source(all)
+    const idx = new RelayedApprovalIndex(s.pages, { minIntervalMs: 0 })
+    await idx.refresh()
+    expect(idx.ready).toBe(true)
+    expect(s.calls.sort()).toEqual([1, 2, 3])
+    expect(idx.known(OWNER)).toEqual([{ token: TOKEN, spender: SPENDER, kind: 'erc20', txHash: 'H11' }])
+    expect(idx.known(OTHER)).toEqual([])
+
+    // One new approval arrives: only page 1 is read again.
+    all.push(tx(251, approveB64(OTHER, 9n)))
+    s.calls.length = 0
+    await idx.refresh()
+    expect(s.calls).toEqual([1])
+    expect(
+      idx
+        .known(OWNER)
+        .map((k) => k.spender)
+        .sort(),
+    ).toEqual([OTHER, SPENDER].sort())
+  })
+
+  it('concurrent callers share one run, and a failed build is retried next time', async () => {
+    let fail = true
+    const s = source([tx(1, approveB64(SPENDER, 1n))])
+    const pages: PageSource = async (p, l) => {
+      if (fail) throw new Error('timeout')
+      return s.pages(p, l)
+    }
+    const idx = new RelayedApprovalIndex(pages, { minIntervalMs: 0 })
+    await expect(idx.refresh()).rejects.toThrow('timeout')
+    expect(idx.ready).toBe(false)
+    fail = false
+    await Promise.all([idx.refresh(), idx.refresh()])
+    expect(s.calls).toEqual([1])
+    expect(idx.ready).toBe(true)
+    expect(idx.known(OWNER)).toHaveLength(1)
+  })
+})
+
+describe('relayed approval index: pruned history', () => {
+  it('reads up to the pruning boundary in small pages and reports where history starts', async () => {
+    const { PrunedHistoryError } = await import('../src/executions')
+    const ACCOUNT = evmToQor(OWNER)
+    const data = Buffer.from('095ea7b3' + pad(SPENDER).slice(2) + u256(3n).slice(2), 'hex').toString('base64')
+    // 130 txs, newest first; the node keeps heights >= 1000 only (txs 1..115 readable: heights 1114..1000).
+    const all = Array.from({ length: 130 }, (_, i) => ({
+      txhash: `H${i}`,
+      height: 1114 - i,
+      msgs: [{ account: ACCOUNT, to: TOKEN, data: i === 112 ? data : '' }],
+    }))
+    const pages: PageSource = async (page, limit) => {
+      const slice = all.slice((page - 1) * limit, page * limit)
+      if (slice.some((t) => t.height < 1000)) throw new PrunedHistoryError(1000)
+      return { total: all.length, txs: slice }
+    }
+    const idx = new RelayedApprovalIndex(pages, { minIntervalMs: 0 })
+    await idx.refresh()
+    expect(idx.ready).toBe(true)
+    expect(idx.historyFrom).toBe(1000)
+    expect(idx.known(OWNER)).toEqual([expect.objectContaining({ txHash: 'H112' })])
   })
 })

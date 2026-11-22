@@ -16,8 +16,10 @@ import {
   ChainRelay,
   RelayService,
   RelayerStore,
+  RelayedApprovalIndex,
   jsonRpc,
   operatorAccount,
+  restPages,
   revokeCalldata,
 } from '../../src/index'
 import { MNEMONIC, freshRoot } from './helpers'
@@ -85,10 +87,15 @@ describe.skipIf(!MNEMONIC)('approval policy, scanner and revoke on Diana (integr
 
     // 3. The scanner finds the live approval under the root's 0x address.
     const owner = qorToEvm(root.qorAddress).toLowerCase()
-    // Logs of relayed calls are not in eth_getLogs on Diana: the relayer's own records are the source for these.
+    // Logs of relayed calls are not in eth_getLogs on Diana. The scanner gets them ONLY from the chain's tx search (a
+    // fresh index, no relayer record): what a restarted relayer, or any other relayer, would see.
+    const index = new RelayedApprovalIndex(restPages(DIANA.rest), { minIntervalMs: 0 })
     const scanner = new ApprovalScanner(jsonRpc(DIANA.evmRpc), {
       fromBlock: DEPLOY_BLOCK,
-      known: (o) => store.approvalCandidates(o),
+      known: async (o) => {
+        await index.refresh()
+        return { candidates: index.known(o), complete: index.ready }
+      },
     })
     let found = await scanner.scan(owner)
     for (let i = 0; i < 10 && !found.approvals.length; i++) {
