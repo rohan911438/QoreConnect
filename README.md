@@ -1,115 +1,181 @@
-# QoreConnect — the migration layer for the migration year
+# QoreConnect
 
 > **Quantum-safe root. MetaMask convenience.**
-> Any Ethereum user and any EVM dApp on QoreChain in under 60 seconds — with a post-quantum key in control and the classical key capped, scoped and revocable.
+> The migration layer for QoreChain's migration year: any MetaMask user can use any EVM dApp on QoreChain, with a
+> post-quantum key in control and the classical key capped, scoped and revocable.
 
-**Hackathon:** Build Before Q-Day: The QoreChain Developer Fest (build.qorechain.io)
-**Network:** QoreChain testnet `qorechain-diana` (EVM chain id 9800)
-**Submission deadline:** 2 Dec 2026, 23:59 UTC (the repo locks automatically)
-**Status:** Planning complete, build not started
+**Live on QoreChain Diana testnet** (EVM chain 9800). Abstract accounts are testnet-only, so QoreConnect does not run on mainnet.
+Built for *Build Before Q-Day: The QoreChain Developer Fest*. Not audited; use small amounts.
 
----
-
-## What this folder contains
-
-This repository currently holds the **planning workspace**. No code has been written yet. Each folder answers one question:
-
-| Folder | Question it answers | Start here |
-|---|---|---|
-| [`idea/`](idea/) | **What** are we building, **why** this idea, and why it is the best idea for QoreChain | [`idea/01-problem.md`](idea/01-problem.md) |
-| [`tracks/`](tracks/) | **Where** do we compete: the main category, side awards, why they fit, and the submission checklist | [`tracks/01-tracks-overview.md`](tracks/01-tracks-overview.md) |
-| [`architecture/`](architecture/) | **How** it works: components, account model, flows, relayer, SDK, security, repo layout | [`architecture/01-system-overview.md`](architecture/01-system-overview.md) |
-| [`prompts/`](prompts/) | **In what order** we build it: sequential build prompts, each with a validation gate | [`prompts/README.md`](prompts/README.md) |
-
-Read them in that order: idea, then tracks, then architecture, then prompts.
+Demo video: *coming with the submission* · Live app: *coming with the deployment*
 
 ---
 
-## The idea in 30 seconds
+## The problem
 
-**The problem.** QoreChain requires every EVM transaction to come from an account with a registered post-quantum (ML-DSA-87) key and an open "EVM window". MetaMask cannot hold that key, and QoreX (QoreChain's wallet) does not yet support EVM signing. So the millions of Ethereum users QoreChain wants to attract **cannot send a single EVM transaction**, and every dApp team rebuilds the same relayer and onboarding code.
+QoreChain only accepts EVM transactions from accounts with a registered post-quantum (ML-DSA-87) key. MetaMask cannot hold
+that key, so the Ethereum users QoreChain wants to attract cannot send a single EVM transaction, and every dApp team would
+have to rebuild the same onboarding and relayer code. QoreChain's roadmap makes the EVM lane **Required** in Q3 2027, but
+only once most EVM traffic already signs hybrid.
 
-**Why it matters to QoreChain.** QoreChain's roadmap calls 2027 *"the migration year"*. In Q3 2027 the EVM lane becomes **Required**, but only once **a supermajority of EVM traffic already signs hybrid**. Today almost nobody can, because nobody can onboard.
+## What QoreConnect does
 
-**The solution.** QoreConnect gives every user a hidden **post-quantum root key** (created in the browser and protected by a passkey). The root key links the user's **MetaMask key as a capped session key**: it is scoped to dApps the user approved, limited per transaction and per day, and revocable in one tap. A **sponsored relayer** submits transactions and pays gas from dApp-funded gas tanks. A **wagmi connector** lets any existing dApp integrate it in about 5 lines. A public **Migration Meter** shows how much of QoreChain's EVM activity is protected by a post-quantum root.
+1. **A post-quantum root key in the browser.** One passkey tap creates an ML-DSA-87 + secp256k1 root account. Its seed
+   is encrypted on the device; nothing secret leaves the browser.
+2. **MetaMask becomes a capped session key.** The root links your MetaMask key with a per-transaction limit, a daily
+   limit and an allow-list of the dApps you approved. The chain enforces all three.
+3. **A sponsored relayer** submits MetaMask-signed calls and pays gas from dApp-funded gas tanks. New accounts get their
+   registration fee sponsored, so a new user needs no QOR at all.
+4. **Never sign blind.** Every call is decoded, simulated and checked against your limits *before* MetaMask asks for a
+   signature. Calls the chain would refuse are shown as "Blocked by chain".
+5. **Q-Day kill switch.** One root-signed transaction revokes every classical key at once.
+6. **Agents with the same safety rails.** An AI agent gets its own capped sub-account and acts only on instructions the
+   root has signed with ML-DSA-87, so prompt injection cannot spend your money.
+7. **Migration Meter and Doctor.** A public page measures how much of QoreChain's EVM activity has a post-quantum root,
+   and a Doctor diagnoses any account in one click.
 
-**The headline numbers we will demonstrate:**
+| | Without QoreConnect | With QoreConnect | Source |
+|---|---|---|---|
+| Signatures for a MetaMask user's first transaction | not possible (no ML-DSA key in MetaMask) | 1 passkey tap + **1** MetaMask signature | [`prompts/STATUS.md`](prompts/STATUS.md) P09 |
+| Onboarding time, fresh browser to linked account | not possible | **35 s** (browser E2E on Diana) | P09 G1 |
+| Loss if the MetaMask key is broken | everything the key controls | at most the daily limit, through approved contracts, until revoked | [`docs/security.md`](docs/security.md) T1 |
+| dApp integration | write your own relayer and key setup | one wagmi connector, **9 lines** | [`apps/demo-dapp/src/wagmi.ts`](apps/demo-dapp/src/wagmi.ts) |
 
-| | Today | With QoreConnect |
-|---|---|---|
-| Steps for a MetaMask user's first transaction | ~12 | 1 passkey tap + 1 MetaMask signature |
-| Time to first transaction | 15+ minutes | under 60 seconds |
-| Loss if the MetaMask key is broken | everything | capped at the daily limit, then revoked |
-| dApp integration effort | write your own relayer and key setup | one wagmi connector |
+## How it works
 
----
+```mermaid
+flowchart LR
+  subgraph Browser["User's browser"]
+    DAPP["Any EVM dApp (wagmi)"] --> CONN["@qoreconnect/wagmi"]
+    CONN --> UI["Preview, approval, onboarding"]
+    UI --> VAULT["Root vault: ML-DSA-87 + secp256k1, passkey-encrypted"]
+    UI -- "personal_sign" --> MM["MetaMask (classical session key)"]
+  end
+  subgraph Server["QoreConnect relayer (self-hostable)"]
+    REL["Relayer: pre-check, hybrid envelope, pays gas"]
+    SPON["Sponsor: first registration fee"]
+    METER["Migration Meter + Doctor"]
+  end
+  subgraph Chain["QoreChain Diana"]
+    PQC["x/pqc: ML-DSA key registry"]
+    AA["x/abstractaccount: session keys and spending rules"]
+    EVM["EVM lane (9800)"]
+  end
+  CONN -- "MetaMask-signed MsgExecuteEVM" --> REL --> AA --> EVM
+  VAULT -- "root-signed: register, link, rules, revoke" --> PQC & AA
+  SPON --> PQC
+  METER --> PQC & AA
+```
 
-## Where we compete
+More: [`architecture/`](architecture/) (account model, flows, relayer, SDK, threat model).
 
-- **Main category:** Post-Quantum AI Agents ($1,500 / $750). See [`tracks/02-main-track-pq-ai-agents.md`](tracks/02-main-track-pq-ai-agents.md).
-- **Side awards (targets):** People's Choice, Best AI-Native Build, **Quantum Campus** (the team is eligible: all members are enrolled students).
-- **Fallback awards (entered):** **Regional Awards** (5 × $200) and **Top-Quality Awards** (7 × $250, jury score ≥ 70/100). Both are paid only to projects that win no other prize.
-- **Best case:** $1,500 + $500 + $500 + $500 = **$3,000**. See [`tracks/03-side-awards.md`](tracks/03-side-awards.md).
-- **After the fest:** Association Grant (up to $10,000 in QOR).
-- **Fallback category:** Post-Quantum dApp, if the organisers say we do not fit AI Agents.
+## Quick start
 
----
+### Run everything locally
 
-## How the build will run
+Needs Node 22+, pnpm 11 and (for the contracts) Foundry.
 
-The build is split into **16 sequential prompts** (`prompts/P01` to `prompts/P16`). Each prompt has:
+```bash
+git clone https://github.com/rohan911438/QoreConnect.git && cd QoreConnect
+pnpm install
+cp .env.example .env          # then fill in SPONSOR_MNEMONIC, RELAYER_MNEMONIC and ADMIN_TOKEN (testnet only!)
+pnpm build:packages
+pnpm --filter @qoreconnect/relayer-app seed   # create the demo gas tank
+pnpm dev:relayer              # http://localhost:8787/health
+pnpm dev:web                  # http://localhost:3000 (onboarding, dashboard, /meter, /doctor)
+pnpm dev:demo                 # http://localhost:5173 (Quantum Tip Jar demo dApp)
+```
 
-1. **Goal and context**: what to build and what it depends on.
-2. **Tasks**: concrete steps.
-3. **Deliverables**: files and artefacts that must exist when it is done.
-4. **Validation gate**: commands and checks that must pass before the next prompt starts.
-5. **Failure branch**: what to do if the gate fails.
+The sponsor and relayer accounts need a little testnet QOR on Diana. Use separate accounts and never a mainnet phrase.
 
-**P01 is a go/no-go spike.** It tests the 5 assumptions the whole design depends on, on the live testnet, before any product code is written.
+### Checks
 
-See [`prompts/README.md`](prompts/README.md) for the execution rules and the schedule.
+```bash
+pnpm lint && pnpm typecheck && pnpm test     # unit tests (mocked chain), runs in CI
+pnpm test:contracts                          # Foundry
+pnpm test:integration                        # live on Diana (needs the operator keys)
+pnpm demo:attack                             # a drainer dApp tries to empty a QoreConnect account and is refused
+```
 
----
+### Integrate a dApp (wagmi)
 
-## Planned tech stack (summary)
+```ts
+import { createConfig } from 'wagmi'
+import { qoreConnect, qoreTransport, qorechainDiana } from '@qoreconnect/wagmi'
+import { createQoreConnectUI } from '@qoreconnect/react'
 
-- **Monorepo:** pnpm workspaces, TypeScript everywhere
-- **Packages:** `@qoreconnect/core`, `@qoreconnect/wagmi`, `@qoreconnect/react`, `@qoreconnect/relayer`
-- **Apps:** `apps/web` (Next.js: onboarding, dashboard, Migration Meter), `apps/relayer` (Node + Hono, Docker), `apps/demo-dapp` (Vite + wagmi)
-- **Contracts:** Foundry (demo target contract and tests)
-- **QoreChain kits:** `@qorechain/sdk` 0.14.0, `@qorechain/pqc`, `@qorechain/qoresign`, `@qorechain/evm`, `@qorechain/wallet-adapter` 0.6.0
-- **Hosting:** Vercel (web) and a container host (relayer)
+export const ui = createQoreConnectUI()
+export const config = createConfig({
+  chains: [qorechainDiana],
+  connectors: [qoreConnect({ appName: 'My dApp', contracts: ['0xYourContract'], gasTankId: 'my-dapp', relayerUrl: 'https://your-relayer', ui: ui.hooks })],
+  transports: { [qorechainDiana.id]: qoreTransport() },
+})
+// and render <QoreConnectProvider ui={ui}> from @qoreconnect/react once, near the root of your app.
+```
 
-Full detail: [`architecture/07-tech-stack-and-repo-layout.md`](architecture/07-tech-stack-and-repo-layout.md).
+Your existing `useWriteContract` and `useWaitForTransactionReceipt` code works unchanged.
 
----
+## Repository
 
-## Key dates (UTC)
-
-| Date | Milestone |
+| Path | What it is |
 |---|---|
-| 22 Nov 2026 | P01 feasibility spike: go/no-go |
-| 26 Nov 2026 | SDK published, start inviting other teams to integrate |
-| 27 Nov 2026, 16:30 | Workshop 4: protocol building and submission clinic |
-| 30 Nov 2026 | Feature freeze |
-| 2 Dec 2026, 23:59 | Submission deadline |
-| 6 to 15 Dec 2026 | Judging and People's Choice vote |
-| 16 Dec 2026 | Winners announced |
+| `packages/core` | Root vault, chain client, session keys and rules, EIP-1193 provider, signing preview, agent instructions |
+| `packages/wagmi` | wagmi connector and `qoreTransport()` |
+| `packages/react` | Onboarding modal, approval sheet, signing preview, unlock prompt |
+| `packages/relayer` | Relayer, sponsor, gas tanks, Migration Meter indexer, Doctor |
+| `apps/relayer` | The relayer server (Hono, Docker) |
+| `apps/web` | Next.js app: landing, onboarding, dashboard with kill switch and agents, `/meter`, `/doctor` |
+| `apps/demo-dapp` | Quantum Tip Jar (Vite + wagmi) and the attack page |
+| `examples/agent` | AI agent that acts only on root-signed instructions (Claude planner with a deterministic fallback) |
+| `contracts` | QoreTipJar, Drainer (attack demo), QoreConnectGuard; Foundry tests |
 
----
+## Testnet evidence
 
-## Honesty rules for this project
+Every claim is backed by a Diana transaction or a script you can rerun: [`docs/testnet-evidence.md`](docs/testnet-evidence.md)
+and the per-step log in [`prompts/STATUS.md`](prompts/STATUS.md).
 
-QoreChain's own style is *"a number that can be checked is a fact"*. We follow it:
+| Contract | Address |
+|---|---|
+| QoreTipJar | `0x42653b89eff2a993cf2767fedef783366f53aea4` |
+| Drainer (attack demo, never approved) | `0x36003c3cea4a8e38cff894cce2c1d1be94e23baa` |
+| QoreConnectGuard | `0x1a5b03240e7b3ce11fb8e59ef5da1cb60fbe9eab` |
 
-- We say **"live on Diana testnet"**, never "live on mainnet". Abstract accounts are switched off on mainnet.
-- The MetaMask key is described as **"classical, capped and revocable"**, never as "quantum-safe". The root key is the quantum-safe part.
-- Every number in the README, video and Migration Meter links to a source that can be checked.
-- Facts that we have not yet verified on testnet are marked **(unverified)** in these documents until P01 confirms them.
+## Security and honest limitations
 
----
+The threat model, every mitigation with its code and test, and the invariants are in [`docs/security.md`](docs/security.md).
+
+- The MetaMask key is **classical**: capped, scoped and revocable, not quantum-safe. The root key is the quantum-safe part.
+- MetaMask shows a raw digest; QoreConnect's preview is what you read.
+- QoreConnect runs on **Diana testnet** only; abstract accounts are switched off on mainnet.
+- The relayer is a liveness dependency. It is self-hostable, and the root key can always act directly.
+- Passkey PRF is not available in every browser; the fallback is a password.
+- Not audited.
+
+## Status
+
+| Feature | Status |
+|---|---|
+| Root vault (passkey or password), recovery code | Shipped |
+| Sponsored onboarding with one MetaMask signature | Shipped |
+| Session keys, limits, allow-list, revoke, kill switch | Shipped |
+| Relayer with pre-check and gas tanks | Shipped |
+| wagmi connector, EIP-1193 provider, signing preview | Shipped |
+| Tip Jar demo dApp and attack demo | Shipped |
+| Agent mode (root-signed instructions, sub-accounts) | Shipped (live Claude run needs an API key; deterministic planner verified on Diana) |
+| Migration Meter and Doctor | Shipped |
+| Hosted deployment, npm packages | In progress |
+
+## Hackathon
+
+Category: **Post-Quantum AI Agents** (mapping: [`tracks/02-main-track-pq-ai-agents.md`](tracks/02-main-track-pq-ai-agents.md)).
+How AI was used to build it: [`AI_USAGE.md`](AI_USAGE.md). Planning documents: [`docs/planning.md`](docs/planning.md).
+
+## Credits
+
+Built on QoreChain's official kits: [`@qorechain/sdk`](https://www.npmjs.com/package/@qorechain/sdk) 0.14.0 (accounts,
+hybrid signing, abstract-account messages) and [`@qorechain/pqc`](https://www.npmjs.com/package/@qorechain/pqc) 0.2.3
+(ML-DSA-87). Also wagmi, viem, Next.js, Hono, Foundry and the Anthropic SDK.
 
 ## Licence
 
-The code will be released under **Apache-2.0** (a fest requirement is MIT or Apache-2.0 with the licence file in the repo).
-"# QoreConnect" 
+[Apache-2.0](LICENSE)
