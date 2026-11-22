@@ -60,6 +60,9 @@ for (const f of files) {
   // 32-byte hex constants that look like private keys; known public constants (hashes, topics) are listed explicitly.
   for (const m of s.matchAll(PK)) {
     const ctx = s.slice(Math.max(0, m.index - 40), m.index).toLowerCase()
+    // Elements of array literals (e.g. @noble/curves isogeny-map coefficient tables, right after `seed:48` in the
+    // hash-to-curve config) are public constants, not keys.
+    if (/[[,]\s*["'`]$/.test(ctx)) continue
     if (/private|secret|seed|mnemonic/.test(ctx)) findings.push(`${f}: key-shaped hex near "${ctx.slice(-20)}"`)
   }
 }

@@ -1,6 +1,6 @@
 import { decodeAuthenticatorExecutions } from '@qorechain/sdk'
 import { DEFAULT_CALL_GAS_LIMIT, DIANA, type QoreNetwork } from '../config'
-import { QoreConnectError } from '../errors'
+import { QoreConnectError, userMessage } from '../errors'
 import { QoreClient } from '../chain/client'
 import { fetchTxResult } from '../chain/tx'
 import type { FetchLike } from '../chain/http'
@@ -11,7 +11,7 @@ import { RootVault } from '../vault/vault'
 import { approveDapp, getSessionState } from '../account/session'
 import { onboardAndLink } from '../flow'
 import { normaliseCall } from '../account/rules'
-import { toRpcError } from './errors'
+import { ProviderRpcError, toRpcError } from './errors'
 import { buildPreview, type Preview } from '../preview/preview'
 import type { Abi } from 'viem'
 import { CHAIN_ID_HEX, evmRpc, getReceipt, getTransaction, type RpcFn } from './receipts'
@@ -179,7 +179,7 @@ export class QoreConnectProvider implements Eip1193Provider {
       case 'wallet_addEthereumChain': {
         const id = String(params?.[0]?.chainId ?? '').toLowerCase()
         if (id === CHAIN_ID_HEX || id === '9800') return null
-        throw Object.assign(new Error('QoreConnect supports QoreChain Diana (9800) only'), { code: 4902 })
+        throw new ProviderRpcError(4902, userMessage('WRONG_NETWORK'), { qoreconnect: { code: 'WRONG_NETWORK' } })
       }
       case 'wallet_requestPermissions':
         await this.connect()
@@ -226,7 +226,7 @@ export class QoreConnectProvider implements Eip1193Provider {
 
   private async requireMetaMask(): Promise<Eip1193Provider> {
     if (!this.metamask) this.metamask = await discoverMetaMask()
-    if (!this.metamask) throw new QoreConnectError('INVALID_INPUT', { message: 'MetaMask was not found. Install MetaMask to use QoreConnect.' })
+    if (!this.metamask) throw new QoreConnectError('METAMASK_MISSING')
     return this.metamask
   }
 
@@ -269,8 +269,13 @@ export class QoreConnectProvider implements Eip1193Provider {
 
   private async doConnect(): Promise<{ accounts: string[]; chainId: string }> {
     const mm = await this.requireMetaMask()
-    const [addr] = ((await mm.request({ method: 'eth_requestAccounts' })) as string[]) ?? []
-    if (!addr) throw new QoreConnectError('USER_REJECTED')
+    const [addr] =
+      ((await mm.request({ method: 'eth_requestAccounts' }).catch((e: any) => {
+        // -32002: MetaMask already has a request open (typically the unlock screen).
+        if (e?.code === -32002) throw new QoreConnectError('METAMASK_LOCKED', { detail: String(e?.message ?? e) })
+        throw e
+      })) as string[]) ?? []
+    if (!addr) throw new QoreConnectError('METAMASK_LOCKED')
     this.metamaskAddress = addr.toLowerCase()
     const info = await this.vault.info()
     if (!info || !(await this.isLinked(info.qorAddress, this.metamaskAddress))) {

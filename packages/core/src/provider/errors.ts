@@ -21,6 +21,9 @@ const CODES: Partial<Record<QoreConnectErrorCode, number>> = {
   MODULE_DISABLED: 4901,
   INVALID_INPUT: -32602,
   RATE_LIMITED: -32005,
+  METAMASK_MISSING: 4900,
+  METAMASK_LOCKED: 4100,
+  WRONG_NETWORK: 4902,
 }
 
 export function toRpcError(e: unknown): Error {

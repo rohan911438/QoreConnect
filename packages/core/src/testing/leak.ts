@@ -18,8 +18,14 @@ function indexOfBytes(hay: Uint8Array, needle: Uint8Array): number {
 
 export interface SecretSet {
   mnemonic?: string
-  /** Hex private keys (secp256k1) or raw secret bytes (ML-DSA secret key). */
+  /** Hex private keys (secp256k1) or raw secret bytes. For ML-DSA secret keys use `mldsaSecretKeys`. */
   keys: (string | Uint8Array)[]
+  /**
+   * ML-DSA (FIPS 204) secret keys. Their first 32 bytes are rho, the PUBLIC seed that is also the first 32 bytes of the
+   * public key (which is legitimately sent on chain), so the detector watches the secret parts instead: K (bytes 32–63)
+   * and the start of s1 (bytes 128–159).
+   */
+  mldsaSecretKeys?: Uint8Array[]
 }
 
 export class LeakDetector {
@@ -31,8 +37,11 @@ export class LeakDetector {
   constructor(s: SecretSet) {
     const words = s.mnemonic?.trim().split(/\s+/) ?? []
     this.phrases = words.length >= 3 ? words.slice(0, -2).map((_, i) => words.slice(i, i + 3).join(' ')) : []
-    this.needles = s.keys.map((k, i) => {
-      const bytes = (typeof k === 'string' ? fromHex(k) : k).slice(0, 32)
+    const raw: Uint8Array[] = [
+      ...s.keys.map((k) => (typeof k === 'string' ? fromHex(k) : k).slice(0, 32)),
+      ...(s.mldsaSecretKeys ?? []).flatMap((k) => [k.slice(32, 64), k.slice(128, 160)]),
+    ]
+    this.needles = raw.map((bytes, i) => {
       // base64 of the secret at each of the three alignments, minus the edge characters that depend on neighbours
       const b64 = [0, 1, 2].map((o) => toB64(bytes.slice(o)).replace(/=+$/, '').slice(1, -2)).filter((x) => x.length >= 16)
       return { name: `key#${i}`, bytes, text: [toHex(bytes), ...b64] }

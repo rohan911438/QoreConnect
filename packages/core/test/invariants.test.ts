@@ -69,6 +69,16 @@ describe('Invariant 5: no private key or seed is sent over the network', () => {
     expect(d.leaks).toHaveLength(4)
   })
 
+  it('ML-DSA: the public rho prefix (shared with the public key) is not a leak; the secret K and s1 are', () => {
+    const sk = new Uint8Array(4896).map((_, i) => (i * 131 + 7) & 0xff)
+    const d = new LeakDetector({ keys: [], mldsaSecretKeys: [sk] })
+    d.bytes('public key on chain', new Uint8Array([9, ...sk.slice(0, 32), 9]))
+    expect(d.leaks).toEqual([])
+    d.bytes('K', new Uint8Array([9, ...sk.slice(32, 64)]))
+    d.bytes('s1', new Uint8Array([...sk.slice(128, 160), 9]))
+    expect(d.leaks).toHaveLength(2)
+  })
+
   it('a relay request signed by MetaMask carries the signature, never the key', async () => {
     const { privateKeyToAccount } = await import('viem/accounts')
     const pk = generatePrivateKey()
@@ -99,7 +109,7 @@ describe('Invariant 5: no private key or seed is sent over the network', () => {
     const root = await vault.create({ kind: 'password', password: 'invariant five', scrypt: { N: 2 ** 10, r: 8, p: 1 } })
     const mnemonic = await vault.exportRecoveryCode({ kind: 'password', password: 'invariant five' })
     const acct = root.unsafeAccount()
-    const d = new LeakDetector({ mnemonic, keys: [acct.privateKey, acct.pqc.secretKey] })
+    const d = new LeakDetector({ mnemonic, keys: [acct.privateKey], mldsaSecretKeys: [acct.pqc.secretKey] })
     const fetchImpl = d.wrapFetch(async (url: string) => {
       const body = /accounts\//.test(url)
         ? { account: { '@type': '/cosmos.auth.v1beta1.BaseAccount', account_number: '7', sequence: '0' } }

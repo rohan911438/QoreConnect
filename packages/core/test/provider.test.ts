@@ -99,6 +99,21 @@ describe('QoreConnectProvider routing', () => {
     await expect(p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] })).rejects.toMatchObject({ code: 4902 })
   })
 
+  it('P13 errors: wrong network, MetaMask locked (-32002) and missing MetaMask carry a typed code and a next step', async () => {
+    const { p, mm } = await setup()
+    await expect(p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] })).rejects.toMatchObject({
+      code: 4902,
+      data: { qoreconnect: { code: 'WRONG_NETWORK' } },
+      message: expect.stringMatching(/Switch the dApp to Diana/),
+    })
+    mm.request.mockImplementationOnce(async () => {
+      throw Object.assign(new Error('Request of type eth_requestAccounts already pending'), { code: -32002 })
+    })
+    await expect(p.request({ method: 'eth_requestAccounts' })).rejects.toMatchObject({ data: { qoreconnect: { code: 'METAMASK_LOCKED' } }, message: expect.stringMatching(/unlock it/) })
+    const bare = new QoreConnectProvider({ appName: 'T', contracts: [COUNTER], relayerUrl: 'http://relayer', gasTankId: 'demo-dapp', vault: new RootVault(new MemoryVaultStorage()), fetch: rpcFetch as any })
+    await expect(bare.request({ method: 'eth_requestAccounts' })).rejects.toMatchObject({ data: { qoreconnect: { code: 'METAMASK_MISSING' } }, message: expect.stringMatching(/Install MetaMask/) })
+  })
+
   it('refuses raw signing methods', async () => {
     const { p } = await setup()
     await expect(p.request({ method: 'eth_sign', params: [] })).rejects.toMatchObject({ code: 4200 })

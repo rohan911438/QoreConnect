@@ -76,13 +76,31 @@ describe('ApproveSheet', () => {
         limits={{ perTxUqor: 1_000_000n, dailyUqor: 5_000_000n }}
         onApprove={onApprove}
         onCancel={() => {}}
+        hasCode={async () => true}
       />,
     )
     expect(screen.getByRole('heading').textContent).toBe('Approve Quantum Tip Jar to use your account?')
+    expect(screen.queryByTestId('qc-approve-nocode')).toBeNull()
     expect(screen.getAllByRole('link')).toHaveLength(2)
     expect(screen.getByText(/only function 0xa9059cbb/)).toBeTruthy()
     expect(screen.getByText(/Unchanged: 1 QOR per transaction, 5 QOR per day/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Approve with passkey' }))
     await waitFor(() => expect(onApprove).toHaveBeenCalledOnce())
+  })
+
+  it('T4: warns when an address has no contract code, and says code is not verified', async () => {
+    render(
+      <ApproveSheet
+        appName="Shady"
+        contracts={['0xfa1643e3fbd2f58d8dbaf4ec025c2541062ffc74', '0x2222222222222222222222222222222222222222']}
+        net={DIANA}
+        onApprove={() => {}}
+        onCancel={() => {}}
+        hasCode={async (a) => a.startsWith('0xfa')}
+      />,
+    )
+    await waitFor(() => expect(screen.getByTestId('qc-approve-nocode').textContent).toMatch(/One address has no contract code/))
+    expect(screen.getAllByText('No contract code')).toHaveLength(1)
+    expect(screen.getByText(/does not verify what a contract/)).toBeTruthy()
   })
 })

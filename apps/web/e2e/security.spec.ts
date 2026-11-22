@@ -26,8 +26,8 @@ for (const path of [...VAULT, ...OTHER]) {
 }
 
 test('vault page: a script injected without the nonce does not run; the nonce changes per request', async ({ page }) => {
-  const a = (await page.goto('/account'))!.headers()['content-security-policy']
-  const b = (await page.goto('/account'))!.headers()['content-security-policy']
+  const a = (await page.goto('/account'))!.headers()['content-security-policy'] ?? ''
+  const b = (await page.goto('/account'))!.headers()['content-security-policy'] ?? ''
   expect(a.match(/nonce-([^']+)/)![1]).not.toBe(b.match(/nonce-([^']+)/)![1])
   const ran = await page.evaluate(async () => {
     ;(window as any).__xss = false
