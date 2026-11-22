@@ -97,10 +97,13 @@ describe('Doctor (Flow G): first failure and fix', () => {
     await expect(runDoctor(chain(), { address: ACCOUNT, target: '0x12' })).rejects.toThrow(/target/)
   })
 
-  it('allow-list matching honours selector entries', () => {
+  it('allow-list matching is the same as the relayer and the chain (code review)', () => {
     expect(allowListCovers([`${TIPJAR}/0x12345678`], TIPJAR, '0x12345678')).toBe(true)
     expect(allowListCovers([`${TIPJAR}/0x12345678`], TIPJAR, '0xdeadbeef')).toBe(false)
-    expect(allowListCovers([`${TIPJAR}/0x12345678`], TIPJAR)).toBe(true)
+    // A selector-scoped entry does not cover the whole contract.
+    expect(allowListCovers([`${TIPJAR}/0x12345678`], TIPJAR)).toBe(false)
+    // An empty allow-list allows any target.
+    expect(allowListCovers([], TIPJAR, '0xdeadbeef')).toBe(true)
     expect(allowListCovers([TIPJAR.toUpperCase().replace('0X', '0x')], TIPJAR, '0xdeadbeef')).toBe(true)
   })
 

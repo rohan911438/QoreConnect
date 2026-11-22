@@ -3,7 +3,7 @@
  * the first failure is the answer, with a one-click fix. Read-only; never signs anything.
  */
 import { evmToQor, qorToEvm } from '@qorechain/sdk'
-import { MANAGED_RULE_ID, ruleBoundsEveryDenom, type AuthenticatorInfo, type PqcKeyInfo, type SpendingRuleInfo } from '@qoreconnect/core'
+import { ruleBoundsEveryDenom, type AuthenticatorInfo, type PqcKeyInfo, type SpendingRuleInfo } from '@qoreconnect/core'
 import type { Tank } from './store'
 
 export type DoctorCheckId = 'pqc-key' | 'evm-window' | 'linked-key' | 'rule' | 'target' | 'tank'
@@ -51,13 +51,18 @@ export function normaliseAccount(input: string): { account: string; evmAddress: 
   throw new DoctorInputError('Enter a qor1… address or a 0x… address.')
 }
 
-/** Does an allow-list entry ("0xtarget" or "0xtarget/0xselector") cover a call to `target` (optionally a selector)? */
+/**
+ * Does the allow-list let a call to `target` (optionally a selector) through? Same matching as the relayer pre-check and
+ * the chain: an empty list allows any target; "0xtarget" covers every function; "0xtarget/0xselector" covers only that
+ * function, so it does not cover the target when no selector (or another one) is given.
+ */
 export function allowListCovers(entries: string[], target: string, selector?: string): boolean {
+  if (!entries.length) return true
   const t = target.toLowerCase()
   const s = selector?.toLowerCase()
   return entries.some((e) => {
     const [to, sel] = e.toLowerCase().split('/')
-    return to === t && (!sel || !s || sel === s)
+    return to === t && (!sel || sel === s)
   })
 }
 
@@ -149,7 +154,8 @@ export async function runDoctor(
   })
 
   // 4. An enabled rule bounding every denom.
-  const managed = rules.find((r) => r.id === MANAGED_RULE_ID && r.enabled) ?? rules.find((r) => r.enabled)
+  // The FIRST enabled rule is the one the chain and the relayer enforce (account-wide, P01 Q6).
+  const managed = rules.find((r) => r.enabled)
   if (!managed || !ruleBoundsEveryDenom(managed)) {
     checks.push({
       id: 'rule',

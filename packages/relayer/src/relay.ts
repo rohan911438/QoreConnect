@@ -93,27 +93,31 @@ export class RelayService {
     return BigInt(Math.ceil((gasLimit + ENVELOPE_GAS_OVERHEAD) * this.net.gasPrice))
   }
 
-  private async precheck(r: RelayRequest, ip: string): Promise<Reject | undefined> {
+  /** Fees of relays that passed the pre-check but are not settled yet, per tank and per tank:account (concurrency). */
+  private readonly inFlight = new Map<string, bigint>()
+  private reserve(keys: string[], fee: bigint) {
+    for (const k of keys) this.inFlight.set(k, (this.inFlight.get(k) ?? 0n) + fee)
+    return () => {
+      for (const k of keys) {
+        const left = (this.inFlight.get(k) ?? 0n) - fee
+        if (left > 0n) this.inFlight.set(k, left)
+        else this.inFlight.delete(k)
+      }
+    }
+  }
+
+  /**
+   * Order matters (code review): the IP rate limit and the signature check come first, so an unauthenticated caller
+   * can neither skip the rate limit nor make the relayer record rows under someone else's account.
+   */
+  private async precheck(r: RelayRequest, ip: string): Promise<(Reject & { authenticated: boolean }) | { release: () => void }> {
+    const unauth = (x: Reject) => ({ ...x, authenticated: false })
+    const authed = (x: Reject) => ({ ...x, authenticated: true })
     const gasLimit = Number(r.gasLimit)
     if (gasLimit < 21_000 || gasLimit > this.policy.maxGasLimit)
-      return reject(400, 'INVALID_INPUT', `gasLimit must be between 21000 and ${this.policy.maxGasLimit}`)
-
-    // Tank policy
-    const tank = this.store.getTank(r.tankId)
-    if (!tank) return reject(404, 'INVALID_INPUT', `unknown gas tank "${r.tankId}"`)
-    if (tank.paused) return reject(403, 'TANK_EMPTY', 'this gas tank is paused')
-    const fee = this.estimateFeeUqor(gasLimit)
-    if (tank.balanceUqor < fee) return reject(402, 'TANK_EMPTY', "this dApp's gas budget is used up")
-    if (tank.allowedContracts?.length && !tank.allowedContracts.includes(r.to.toLowerCase()))
-      return reject(403, 'NOT_APPROVED', 'this gas tank does not pay for calls to that contract')
-    if (this.store.accountSpentToday(tank.id, r.account) + fee > tank.perUserDailyCapUqor)
-      return reject(429, 'RATE_LIMITED', 'daily gas allowance for this account is used up')
-
-    // Rate limits
-    if (!this.store.hit(`relay-acct:${r.account}`, this.policy.perAccountPerMinute, 60_000))
-      return reject(429, 'RATE_LIMITED', 'too many requests for this account')
+      return unauth(reject(400, 'INVALID_INPUT', `gasLimit must be between 21000 and ${this.policy.maxGasLimit}`))
     if (!this.store.hit(`relay-ip:${ip}`, this.policy.perIpPerMinute, 60_000))
-      return reject(429, 'RATE_LIMITED', 'too many requests from this network')
+      return unauth(reject(429, 'RATE_LIMITED', 'too many requests from this network'))
 
     // Signature (local): the MetaMask key must have signed exactly this call.
     const digest = evmAuthSignBytesV2({
@@ -130,56 +134,70 @@ export class RelayService {
       () => undefined,
     )
     if (!signer || signer.toLowerCase() !== r.pubkey.toLowerCase())
-      return reject(400, 'INVALID_INPUT', 'signature does not match the key for this call')
+      return unauth(reject(400, 'INVALID_INPUT', 'signature does not match the key for this call'))
+    const fail = (x: Reject) => authed(x)
+
+    if (!this.store.hit(`relay-acct:${r.account}`, this.policy.perAccountPerMinute, 60_000))
+      return fail(reject(429, 'RATE_LIMITED', 'too many requests for this account'))
+
+    // Tank policy (in-flight fees count, so parallel requests cannot overspend the tank or a user's daily cap)
+    const tank = this.store.getTank(r.tankId)
+    if (!tank) return fail(reject(404, 'INVALID_INPUT', `unknown gas tank "${r.tankId}"`))
+    if (tank.paused) return fail(reject(403, 'TANK_EMPTY', 'this gas tank is paused'))
+    const fee = this.estimateFeeUqor(gasLimit)
+    const tankKey = `tank:${tank.id}`
+    const userKey = `user:${tank.id}:${r.account}`
+    if (tank.balanceUqor - (this.inFlight.get(tankKey) ?? 0n) < fee) return fail(reject(402, 'TANK_EMPTY', "this dApp's gas budget is used up"))
+    if (tank.allowedContracts?.length && !tank.allowedContracts.includes(r.to.toLowerCase()))
+      return fail(reject(403, 'NOT_APPROVED', 'this gas tank does not pay for calls to that contract'))
+    if (this.store.accountSpentToday(tank.id, r.account) + (this.inFlight.get(userKey) ?? 0n) + fee > tank.perUserDailyCapUqor)
+      return fail(reject(429, 'RATE_LIMITED', 'daily gas allowance for this account is used up'))
+    const release = this.reserve([tankKey, userKey], fee)
+    const done = (x: Reject) => (release(), fail(x))
 
     // Freshness (early code 11, no broadcast)
-    const [nonce, auths, rules] = await Promise.all([
-      this.chain.authNonce(r.account, r.pubkey),
-      this.chain.authenticators(r.account),
-      this.chain.rules(r.account),
-    ])
-    if (BigInt(r.nonce) !== nonce)
-      return reject(409, 'NONCE', `stale signature: key sequence is ${nonce}, request has ${r.nonce}`)
+    try {
+      const [nonce, auths, rules] = await Promise.all([
+        this.chain.authNonce(r.account, r.pubkey),
+        this.chain.authenticators(r.account),
+        this.chain.rules(r.account),
+      ])
+      if (BigInt(r.nonce) !== nonce)
+        return done(reject(409, 'NONCE', `stale signature: key sequence is ${nonce}, request has ${r.nonce}`))
 
-    // Key state
-    const key = auths.find((a) => a.pubkeyHex.toLowerCase() === r.pubkey.slice(2).toLowerCase())
-    if (!key || key.revoked) return reject(403, 'REVOKED', 'this key is not linked or was revoked')
-    if (key.expiryUnix && key.expiryUnix <= Math.floor(Date.now() / 1000))
-      return reject(403, 'EXPIRED', 'this key has expired')
-    if (!key.permissions.some((p) => p === 'evm' || p === 'all'))
-      return reject(403, 'NOT_APPROVED', 'this key may not make EVM calls')
+      // Key state
+      const key = auths.find((a) => a.pubkeyHex.toLowerCase() === r.pubkey.slice(2).toLowerCase())
+      if (!key || key.revoked) return done(reject(403, 'REVOKED', 'this key is not linked or was revoked'))
+      if (key.expiryUnix && key.expiryUnix <= Math.floor(Date.now() / 1000)) return done(reject(403, 'EXPIRED', 'this key has expired'))
+      if (!key.permissions.some((p) => p === 'evm' || p === 'all')) return done(reject(403, 'NOT_APPROVED', 'this key may not make EVM calls'))
 
-    // Rule: the first enabled rule bounds the key (account-wide, P01 Q6)
-    const rule = rules.find((x) => x.enabled)
-    if (!rule) return reject(403, 'NO_RULE', 'the account has no enabled spending rule')
-    const target = r.to.toLowerCase()
-    const selector = r.data.length >= 10 ? r.data.slice(0, 10).toLowerCase() : undefined
-    if (
-      rule.allowedEvmCalls.length &&
-      !rule.allowedEvmCalls.some((c) => c === target || (selector && c === `${target}/${selector}`))
-    ) {
-      return reject(403, 'NOT_APPROVED', 'this contract is not approved for the account')
+      // Rule: the first enabled rule bounds the key (account-wide, P01 Q6)
+      const rule = rules.find((x) => x.enabled)
+      if (!rule) return done(reject(403, 'NO_RULE', 'the account has no enabled spending rule'))
+      const target = r.to.toLowerCase()
+      const selector = r.data.length >= 10 ? r.data.slice(0, 10).toLowerCase() : undefined
+      if (rule.allowedEvmCalls.length && !rule.allowedEvmCalls.some((c) => c === target || (selector && c === `${target}/${selector}`)))
+        return done(reject(403, 'NOT_APPROVED', 'this contract is not approved for the account'))
+      const valueUqor = weiToUqor(BigInt(r.value))
+      if (rule.perTxLimit > 0n && valueUqor > rule.perTxLimit)
+        return done(reject(403, 'LIMIT_EXCEEDED', `value ${valueUqor} uqor is over the per-transaction limit ${rule.perTxLimit} uqor`))
+      // Daily: what this relayer already moved for the account in the last 24 h counts (code review), so a call the chain
+      // will refuse does not cost the tank a fee. The chain keeps its own counter (and may reset it differently from this
+      // rolling window); this is the same estimate the signing preview shows.
+      const spentToday = this.store.accountValueToday(r.account)
+      if (rule.dailyLimit > 0n && spentToday + valueUqor > rule.dailyLimit)
+        return done(
+          reject(403, 'LIMIT_EXCEEDED', `value ${valueUqor} uqor plus ${spentToday} uqor already spent today is over the daily limit ${rule.dailyLimit} uqor`),
+        )
+
+      // Simulation: would the call revert?
+      const sim = await this.chain.simulateCall({ from: qorToEvm(r.account), to: target, data: r.data, value: BigInt(r.value), gas: BigInt(r.gasLimit) })
+      if (!sim.ok) return done(reject(422, 'TX_FAILED', `the call would revert: ${sim.error.slice(0, 200)}`))
+      return { release }
+    } catch (e) {
+      release()
+      throw e
     }
-    const valueUqor = weiToUqor(BigInt(r.value))
-    if (rule.perTxLimit > 0n && valueUqor > rule.perTxLimit)
-      return reject(
-        403,
-        'LIMIT_EXCEEDED',
-        `value ${valueUqor} uqor is over the per-transaction limit ${rule.perTxLimit} uqor`,
-      )
-    if (rule.dailyLimit > 0n && valueUqor > rule.dailyLimit)
-      return reject(403, 'LIMIT_EXCEEDED', `value ${valueUqor} uqor is over the daily limit ${rule.dailyLimit} uqor`)
-
-    // Simulation: would the call revert?
-    const sim = await this.chain.simulateCall({
-      from: qorToEvm(r.account),
-      to: target,
-      data: r.data,
-      value: BigInt(r.value),
-      gas: BigInt(r.gasLimit),
-    })
-    if (!sim.ok) return reject(422, 'TX_FAILED', `the call would revert: ${sim.error.slice(0, 200)}`)
-    return undefined
   }
 
   async relay(body: unknown, ip: string): Promise<{ status: number; body: RelayResponse }> {
@@ -196,16 +214,18 @@ export class RelayService {
       }
     const r = parsed.data as RelayRequest
     const pre = await this.precheck(r, ip)
-    if (pre) {
-      this.store.recordRelay({
-        tankId: r.tankId,
-        account: r.account,
-        signer: r.pubkey.toLowerCase(),
-        target: r.to.toLowerCase(),
-        success: false,
-        error: `${pre.code}: ${pre.error}`,
-        ip,
-      })
+    if (!('release' in pre)) {
+      // Only requests whose signature verified are recorded under their account (activity, meter counts).
+      if (pre.authenticated)
+        this.store.recordRelay({
+          tankId: r.tankId,
+          account: r.account,
+          signer: r.pubkey.toLowerCase(),
+          target: r.to.toLowerCase(),
+          success: false,
+          error: `${pre.code}: ${pre.error}`,
+          ip,
+        })
       return {
         status: pre.status,
         body: { ok: false, code: pre.code, chainCode: CHAIN_CODES[pre.code], error: pre.error, preRejected: true },
@@ -220,6 +240,10 @@ export class RelayService {
       const qe = e instanceof QoreConnectError ? e : undefined
       const code = qe?.code ?? 'RELAYER_UNAVAILABLE'
       const detail = [String((e as Error).message), qe?.detail].filter(Boolean).join(' | ').slice(0, 500)
+      // Broadcast but not seen in time: it may still execute, so charge the estimated fee (code review); otherwise the
+      // tank and the per-user cap would undercount and could be overspent.
+      const estimated = qe?.txHash && !qe.chainCode ? this.estimateFeeUqor(Number(r.gasLimit)) : undefined
+      if (estimated) this.store.debitTank(r.tankId, estimated)
       this.store.recordRelay({
         tankId: r.tankId,
         account: r.account,
@@ -229,10 +253,13 @@ export class RelayService {
         success: false,
         code: qe?.chainCode,
         error: detail,
+        feeUqor: estimated,
         ip,
       })
+      pre.release()
       return { status: 502, body: { ok: false, code, chainCode: qe?.chainCode, error: detail, txHash: qe?.txHash } }
     }
+    pre.release()
 
     const fee = BigInt(res.feeUqor || '0')
     const [result] = decodeAuthenticatorExecutions(res as any, [msg])

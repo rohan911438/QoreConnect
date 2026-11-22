@@ -60,6 +60,7 @@ export type InstructionRejection =
   | 'MALFORMED'
   | 'WRONG_CHAIN'
   | 'WRONG_AGENT'
+  | 'WRONG_OWNER'
   | 'NOT_YET_VALID'
   | 'EXPIRED'
   | 'ROOT_KEY_NOT_REGISTERED'
@@ -119,7 +120,18 @@ function malformed(i: any): string | undefined {
  */
 export function verifyInstruction(
   signed: SignedInstruction,
-  o: { rootPublicKey: Uint8Array | undefined; chainId: string; agent: string; nowUnix?: number; skewS?: number },
+  o: {
+    rootPublicKey: Uint8Array | undefined
+    chainId: string
+    agent: string
+    /**
+     * The agent's pinned owner. Any registered root can produce a valid signature, so the agent must also check WHOSE
+     * root signed: the instruction's root must be the owner's, and its account one the agent was linked to.
+     */
+    owner?: { root: string; accounts: string[] }
+    nowUnix?: number
+    skewS?: number
+  },
 ): VerifyResult {
   const i = signed?.instruction as AgentInstruction
   const bad = malformed(i)
@@ -128,6 +140,10 @@ export function verifyInstruction(
     return { ok: false, reason: 'MALFORMED', detail: 'signature must be hex' }
   if (i.chainId !== o.chainId) return { ok: false, reason: 'WRONG_CHAIN', detail: `instruction is for ${i.chainId}` }
   if (i.agent.toLowerCase() !== o.agent.toLowerCase()) return { ok: false, reason: 'WRONG_AGENT', detail: `instruction is for ${i.agent}` }
+  if (o.owner) {
+    if (i.root !== o.owner.root) return { ok: false, reason: 'WRONG_OWNER', detail: `signed by ${i.root}, but this agent belongs to ${o.owner.root}` }
+    if (!o.owner.accounts.includes(i.account)) return { ok: false, reason: 'WRONG_OWNER', detail: `this agent is not linked to ${i.account}` }
+  }
   const now = o.nowUnix ?? Math.floor(Date.now() / 1000)
   const skew = o.skewS ?? 120
   if (i.issuedAt > now + skew) return { ok: false, reason: 'NOT_YET_VALID', detail: `issued in the future (${i.issuedAt})` }

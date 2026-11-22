@@ -84,6 +84,8 @@ const app = createRelayerApp({
   version: '0.1.0',
   accounts: { relayer: relayerAccount.cosmos, sponsor: sponsorAccount.cosmos },
   corsOrigins: process.env.CORS_ORIGINS?.split(',').map((s) => s.trim()),
+  // Behind a reverse proxy (e.g. a container platform), set TRUST_PROXY_HOPS=1 so rate limits key on the real client.
+  trustProxyHops: Number(process.env.TRUST_PROXY_HOPS ?? 0),
 })
 
 const port = Number(process.env.RELAYER_PORT ?? 8787)

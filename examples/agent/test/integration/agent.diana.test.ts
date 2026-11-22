@@ -66,12 +66,12 @@ describe.skipIf(!MNEMONIC)('agent mode on Diana', () => {
 
     // Agent process: own key; gives the owner a possession proof for the sub-account.
     const agentKey = generatePrivateKey()
+    const subAddr = (await root.deriveSubAccount(1)).cosmos
     const mkAgent = (planner: RulePlanner | CompromisedPlanner, exec?: ConstructorParameters<typeof Agent>[0]['exec']) =>
-      new Agent({ net: DIANA, privateKey: agentKey, relayerUrl: RELAYER, tankId: 'demo-dapp', planner, fetch: fetchImpl, exec, log: (e, d) => console.log(`[agent] ${e}`, JSON.stringify(d ?? {}, (_k, v) => (typeof v === 'bigint' ? v.toString() : v)).slice(0, 400)) })
+      new Agent({ net: DIANA, privateKey: agentKey, relayerUrl: RELAYER, tankId: 'demo-dapp', planner, fetch: fetchImpl, exec, owner: { root: root.qorAddress, accounts: [subAddr] }, log: (e, d) => console.log(`[agent] ${e}`, JSON.stringify(d ?? {}, (_k, v) => (typeof v === 'bigint' ? v.toString() : v)).slice(0, 400)) })
     const agent = mkAgent(new RulePlanner())
 
     const t0 = Date.now()
-    const subAddr = (await root.deriveSubAccount(1)).cosmos
     const created = await createAgent({
       net: DIANA,
       root,

@@ -29,7 +29,7 @@ mitigates it and the test that proves it (P13, gate G3). File references are `pa
 | T7 | Relayer replays a transaction | Per-authenticator nonce: the relayer refuses a stale nonce before broadcast (`packages/relayer/src/relay.ts:141`); the chain refuses with code 11. | `packages/relayer/test/relay.test.ts` (NONCE); `packages/relayer/test/integration/invariants.test.ts` (I3 on Diana) |
 | T8 | Relayer censors | Any relayer URL works (`packages/core/src/provider/provider.ts:59`); the relayer is self-hostable (`apps/relayer`, Dockerfile built in CI); the root key can always act directly. | CI `relayer-docker` job (image builds and serves `/health`) |
 | T9 | Relayer lies about the result | The SDK fetches the transaction by hash, checks that it contains **this** call (account, target, data, value, nonce, gas limit) and that the chain's execution result is `success=true`: `packages/core/src/provider/provider.ts:382`. | `packages/core/test/provider.test.ts` (invariant 4 / T9); `packages/relayer/test/integration/invariants.test.ts` (I4 on Diana, success and refusal) |
-| T10 | Prompt injection commands the agent | The agent acts only on root-signed ML-DSA-87 instructions verified against the key registered on chain (`packages/core/src/agent.ts:120`) and a local guard limits calls to the instruction's targets and selectors (`packages/core/src/agent.ts:339`). Agents live on their own sub-account with their own caps. | `packages/core/test/agent.test.ts` (tampered, wrong key, unsigned, expired, wrong agent/chain); `examples/agent` tests (injection a/b); P11 Diana run (chain code 10) |
+| T10 | Prompt injection commands the agent | The agent acts only on ML-DSA-87 instructions signed by its pinned owner's root and verified against the key registered on chain (`packages/core/src/agent.ts:120`) and a local guard limits calls to the instruction's targets and selectors (`packages/core/src/agent.ts:339`). Agents live on their own sub-account with their own caps. | `packages/core/test/agent.test.ts` (tampered, wrong key, unsigned, expired, wrong agent/chain); `examples/agent` tests (injection a/b); P11 Diana run (chain code 10) |
 | T11 | Rule replacement wipes existing rules | Read-merge-write on every update (`packages/core/src/account/rules.ts:58`–`:91`) and the invariant checker after every write (`packages/core/src/account/session.ts:89`). | `packages/core/test/rules.test.ts`; `packages/core/test/invariants.test.ts` (random sequences, I2) |
 | T12 | "No enabled rule = no limit" | Invariant 1, checked after every write and by the Doctor: `packages/core/src/account/rules.ts:123`; `packages/relayer/src/doctor.ts`. The allow-list is never empty (sentinel): `packages/core/src/account/rules.ts:46`. | `packages/core/test/rules.test.ts` (`assertRuleInvariants`); `packages/relayer/test/doctor.test.ts`; I1 on Diana |
 | T13 | Bare value transfer bypasses `allowed_evm_calls` | Caps are always set on the managed rule (`mergeForLink` defaults), so a bare transfer is still bounded per transaction and per day. | `packages/relayer/test/integration/relay.test.ts` (per-tx and daily refusals on Diana) |
@@ -60,6 +60,24 @@ mitigates it and the test that proves it (P13, gate G3). File references are `pa
 | `/health` alerts on low relayer or sponsor balance, never secrets | `packages/relayer/src/app.ts:26` | `hardening.test.ts` |
 | Mandatory pre-check before broadcast (signature, nonce, key state, allow-list incl. selectors, caps, revert) | `packages/relayer/src/relay.ts:129`–`:181` | `relay.test.ts` |
 | Admin routes need `ADMIN_TOKEN` | `apps/relayer/src/server.ts:83` | `relay.test.ts` (401 without token) |
+
+## Code review (P13, 22 Nov 2026)
+
+A code review of `packages/core`, `packages/relayer`, the approval sheet and the web app's security code found five
+important issues and five minor ones. All ten are fixed, each with a test.
+
+| Finding | Severity | Fix | Test |
+|---|---|---|---|
+| The agent obeyed an instruction signed by **any** registered root, not only its owner's (T10) | Important | The owner's root and sub-accounts are pinned when the owner links the agent; anything else is `WRONG_OWNER`, and an agent without an owner refuses everything (`packages/core/src/agent.ts`, `examples/agent/src/agent.ts`) | `examples/agent/test/unit/agent.test.ts` (owner pinning) |
+| Per-IP rate limits trusted a client-supplied `X-Forwarded-For` (T14) | Important | Ignored by default (socket address); `TRUST_PROXY_HOPS=N` reads the address the trusted proxy appended (`packages/relayer/src/app.ts`) | `hardening.test.ts` (spoofed header) |
+| A broadcast resent after a dropped connection could report an executed transaction as failed | Important | Code 19 ("already in mempool") waits for the first copy by its locally computed hash (`packages/core/src/chain/tx.ts`) | `packages/core/test/broadcast.test.ts` |
+| Unauthenticated requests were recorded under any claimed account before any rate limit | Important | IP rate limit and signature check run first; only authenticated refusals are recorded (`packages/relayer/src/relay.ts`) | `relay.test.ts` |
+| A broadcast that timed out was never charged to the gas tank | Important | The estimated fee is debited and recorded | `relay.test.ts` |
+| The Doctor matched rules and allow-lists differently from the relayer and the chain | Minor | First enabled rule; the same allow-list matching as the pre-check | `doctor.test.ts` |
+| The daily-limit pre-check ignored what was already spent today | Minor | Counts the relayer's record of today's spend | `relay.test.ts` |
+| A missing rule was reported as `LIMIT_EXCEEDED` | Minor | Reported as `NO_RULE` | `provider.ts` |
+| Parallel relays could overspend a tank or a per-user cap | Minor | In-flight fees are reserved at pre-check | `relay.test.ts` |
+| `isSameCall` guessed the calldata encoding from a `0x` prefix | Minor | Always base64 (REST encoding of proto bytes) | `provider.test.ts` |
 
 ## Dependency audit (`pnpm audit --prod`, 22 Nov 2026)
 

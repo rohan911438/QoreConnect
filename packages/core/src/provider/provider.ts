@@ -370,7 +370,8 @@ export class QoreConnectProvider implements Eip1193Provider {
     const go = this.opts.hooks?.onPreview ? await this.opts.hooks.onPreview({ preview, account: root, metamaskAddress: this.metamaskAddress!, appName: this.opts.appName }) : true
     if (preview.blocked) {
       const failed = preview.checks.find((c) => !c.ok && !c.warning && c.id !== 'simulation')!
-      throw new QoreConnectError(failed.id === 'allow-list' ? 'NOT_APPROVED' : 'LIMIT_EXCEEDED', { message: `Blocked by chain: ${failed.detail}` })
+      const code = failed.id === 'allow-list' ? 'NOT_APPROVED' : /^No enabled spending rule/.test(failed.detail) ? 'NO_RULE' : 'LIMIT_EXCEEDED'
+      throw new QoreConnectError(code, { message: `Blocked by chain: ${failed.detail}` })
     }
     if (preview.willFail) throw new QoreConnectError('TX_FAILED', { message: `This call would revert: ${preview.simulation.revertReason}` })
     if (!go) throw new QoreConnectError('USER_REJECTED')
@@ -419,7 +420,8 @@ const b64Hex = (s: string | undefined) => '0x' + Array.from(atob(s ?? ''), (c) =
 /** Does an on-chain MsgExecuteEVM (REST JSON) carry exactly the call that was previewed and signed? */
 export function isSameCall(m: any, call: { account: string; to: string; data: string; valueWei: bigint; nonce?: bigint; gasLimit?: number }): boolean {
   if (!m) return false
-  const data = typeof m.data === 'string' && !m.data.startsWith('0x') ? b64Hex(m.data) : String(m.data ?? '0x')
+  // REST JSON encodes proto bytes as base64, always (a base64 string can itself start with "0x").
+  const data = typeof m.data === 'string' && m.data.length ? b64Hex(m.data) : '0x'
   return (
     m.account === call.account &&
     String(m.to).toLowerCase() === call.to.toLowerCase() &&

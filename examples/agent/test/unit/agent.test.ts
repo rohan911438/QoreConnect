@@ -19,6 +19,8 @@ const CREATOR = '0x707B92f6276799f928CCe4D5873f5A2babF85347'
 const page = { source: 'fixtures/creator-page.html', text: readFileSync(resolve(import.meta.dirname, '../../fixtures/creator-page.html'), 'utf8') }
 
 let root: RootSigner
+/** Another registered root: an attacker who can produce valid ML-DSA signatures of their own. */
+let other: RootSigner | undefined
 const pk = generatePrivateKey()
 const agentAddr = privateKeyToAccount(pk).address
 
@@ -58,7 +60,8 @@ function makeAgent(planner: ClaudePlanner | RulePlanner | CompromisedPlanner, ov
     tankId: 'demo-dapp',
     planner,
     fetch: fetchStub,
-    rootPublicKey: async (r) => (r === root.qorAddress ? root.pqcPublicKey : undefined),
+    rootPublicKey: async (r) => (r === root.qorAddress || r === other?.qorAddress ? (r === root.qorAddress ? root : other!).pqcPublicKey : undefined),
+    owner: { root: root.qorAddress, accounts: ['qor1agentsubaccount'] },
     log: (e, d) => logs.push(`${e} ${JSON.stringify(d ?? {}, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))}`),
     exec: {
       submit: async (req) => {
@@ -73,7 +76,32 @@ function makeAgent(planner: ClaudePlanner | RulePlanner | CompromisedPlanner, ov
 
 beforeAll(async () => {
   root = await new RootVault(new MemoryVaultStorage()).create({ kind: 'password', password: 'agent unit root', scrypt: { N: 2 ** 10, r: 8, p: 1 } })
+  other = await new RootVault(new MemoryVaultStorage()).create({ kind: 'password', password: 'attacker root', scrypt: { N: 2 ** 10, r: 8, p: 1 } })
 }, 60_000)
+
+describe('owner pinning (code review: any registered root could command the agent)', () => {
+  it('another registered root, validly signed, is refused as WRONG_OWNER', async () => {
+    const { agent, submitted } = makeAgent(new RulePlanner())
+    const forged = signInstruction(other!, instruction({ root: other!.qorAddress }))
+    expect(await agent.run(forged, [page])).toMatchObject({ ok: false, rejected: 'WRONG_OWNER' })
+    expect(submitted).toHaveLength(0)
+  })
+
+  it('the owner signing for an account the agent was not linked to is refused', async () => {
+    const { agent } = makeAgent(new RulePlanner())
+    expect(await agent.run(signInstruction(root, instruction({ account: 'qor1someotheraccount' })), [page])).toMatchObject({ ok: false, rejected: 'WRONG_OWNER' })
+  })
+
+  it('an agent with no owner refuses everything; linking pins the owner and refuses a second owner', async () => {
+    const pins: unknown[] = []
+    const { agent } = makeAgent(new RulePlanner(), { owner: undefined, onPin: (o) => pins.push(o) })
+    expect(await agent.run(signInstruction(root, instruction()), [page])).toMatchObject({ ok: false, rejected: 'WRONG_OWNER' })
+    agent.pin(root.qorAddress, 'qor1agentsubaccount')
+    expect(pins).toEqual([{ root: root.qorAddress, accounts: ['qor1agentsubaccount'] }])
+    expect((await agent.run(signInstruction(root, instruction()), [page])).ok).toBe(true)
+    expect(() => agent.pin(other!.qorAddress, 'qor1agentsubaccount')).toThrow(/already belongs/)
+  })
+})
 
 describe('instruction gate', () => {
   it('runs a root-signed instruction (rule planner) and signs exactly one tip', async () => {

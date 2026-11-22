@@ -1,5 +1,6 @@
 import { EthNativeSigner, type UnifiedAccount } from '@qorechain/sdk'
 import type { EncodeObject } from '@cosmjs/proto-signing'
+import { sha256 } from 'viem'
 import type { QoreNetwork } from '../config'
 import { QoreConnectError, classifyChainRefusal } from '../errors'
 import { getJson, HttpError, postJson, type FetchLike } from './http'
@@ -56,6 +57,9 @@ export async function simulateTx(net: QoreNetwork, txBytes: Uint8Array, fetchImp
   return Number(j.gas_info.gas_used)
 }
 
+/** The Cosmos transaction hash: SHA-256 of the signed bytes, upper-case hex. */
+export const txHashOf = (txBytes: Uint8Array): string => sha256(txBytes).slice(2).toUpperCase()
+
 /**
  * REST broadcaster: POST /cosmos/tx/v1beta1/txs (sync), then poll GET /cosmos/tx/v1beta1/txs/{hash}.
  * Works in browsers through a same-origin REST proxy, and in Node directly.
@@ -70,10 +74,13 @@ export class RestBroadcaster implements Broadcaster {
     const sub = await postJson<any>(`${this.net.rest}/cosmos/tx/v1beta1/txs`, { tx_bytes: b64(txBytes), mode: 'BROADCAST_MODE_SYNC' }, this.opts.fetch)
     const tr = sub.tx_response
     if (!tr) throw new QoreConnectError('TX_FAILED', { detail: JSON.stringify(sub).slice(0, 500) })
+    // Code 19 = "tx already in mempool/cache": a resend after a dropped connection. The first copy was accepted, so wait
+    // for it by its hash instead of reporting a transaction that will execute as failed.
+    if (tr.code === 19) tr.code = 0
     if (tr.code && tr.code !== 0) {
       throw new QoreConnectError(classifyChainRefusal(tr.raw_log, tr.code), { chainCode: tr.code, txHash: tr.txhash, detail: tr.raw_log })
     }
-    const hash: string = tr.txhash
+    const hash: string = tr.txhash || txHashOf(txBytes)
     const deadline = Date.now() + (this.opts.timeoutMs ?? 60_000)
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, this.opts.pollMs ?? 1_000))

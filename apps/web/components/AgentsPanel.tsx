@@ -60,7 +60,7 @@ export function AgentsPanel({ net, busy, rootAction, unlocked }: { net: QoreNetw
       const base = agentUrl.replace(/\/$/, '')
       const index = (await listAgents({ net, root, maxIndex: 5 }).catch(() => [])).reduce((m, a) => Math.max(m, a.index), 0) + 1
       const sub = await root.deriveSubAccount(index)
-      const proofRes = await fetch(`${base}/link-proof`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ account: sub.cosmos }) })
+      const proofRes = await fetch(`${base}/link-proof`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ account: sub.cosmos, root: root.qorAddress }) })
       if (!proofRes.ok) throw new Error(`The agent at ${base} did not answer (${proofRes.status}). Is it running?`)
       const p = await proofRes.json()
       const created = await createAgent({

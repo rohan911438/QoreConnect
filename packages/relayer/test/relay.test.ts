@@ -172,6 +172,48 @@ describe('RelayService pipeline', () => {
     expect(third).toMatchObject({ status: 429, body: { code: 'RATE_LIMITED' } })
     expect(chain.submitted).toBe(2)
   })
+
+  it('code review: unsigned junk is rate limited by IP first and never recorded under the claimed account', async () => {
+    const { pk, store, svc } = setup(undefined, undefined, { perIpPerMinute: 3 })
+    const junk = { ...(await signedRequest(pk)), signature: '0x' + '11'.repeat(65), tankId: 'nope' }
+    const statuses: number[] = []
+    for (let i = 0; i < 5; i++) statuses.push((await svc.relay(junk, '6.6.6.6')).status)
+    expect(statuses).toEqual([400, 400, 400, 429, 429])
+    expect(store.accountActivity(ACCOUNT)).toHaveLength(0)
+  })
+
+  it('code review: the daily check counts what was already spent today', async () => {
+    const { pk, svc, chain } = setup({ perTxLimit: 1_000_000n, dailyLimit: 1_500_000n })
+    const data = encodeFunctionData({ abi, functionName: 'tip' })
+    expect((await svc.relay(await signedRequest(pk, { value: QOR, data, nonce: 0n }), 'x')).body.success).toBe(true)
+    const second = await svc.relay(await signedRequest(pk, { value: QOR, data, nonce: 1n }), 'x')
+    expect(second.body).toMatchObject({ code: 'LIMIT_EXCEEDED', preRejected: true })
+    expect(chain.submitted).toBe(1)
+  })
+
+  it('code review: parallel requests cannot overspend a per-user gas cap (in-flight fees are reserved)', async () => {
+    const { pk, store, svc, chain } = setup()
+    // Each relay's estimated envelope fee is 97,500 uqor: a 250,000 cap has room for exactly two.
+    store.updateTank('demo-dapp', { perUserDailyCapUqor: 250_000n })
+    const slow = chain.submit.bind(chain)
+    chain.submit = async () => (await new Promise((r) => setTimeout(r, 30)), slow())
+    chain.authNonce = async () => 0n // isolate the cap: every copy looks fresh at pre-check time
+    const req = await signedRequest(pk)
+    const out = await Promise.all([1, 2, 3].map(() => svc.relay({ ...req }, 'x')))
+    expect(out.filter((o) => o.status === 200)).toHaveLength(2)
+    expect(out.filter((o) => o.body.code === 'RATE_LIMITED')).toHaveLength(1)
+  })
+
+  it('code review: a broadcast that times out is still charged the estimated fee', async () => {
+    const { pk, store, svc, chain } = setup()
+    const { QoreConnectError } = await import('@qoreconnect/core')
+    chain.submit = async () => {
+      throw new QoreConnectError('TX_FAILED', { message: 'Transaction was not included in time', txHash: 'CD'.repeat(32) })
+    }
+    const out = await svc.relay(await signedRequest(pk), 'x')
+    expect(out.status).toBe(502)
+    expect(store.getTank('demo-dapp')!.balanceUqor).toBe(10_000_000n - svc.estimateFeeUqor(200_000))
+  })
 })
 
 describe('relayer app routes', () => {

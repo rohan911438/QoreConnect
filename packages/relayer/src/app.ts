@@ -1,4 +1,4 @@
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { cors } from 'hono/cors'
 import { bodyLimit } from 'hono/body-limit'
 import { QoreClient, type QoreNetwork } from '@qoreconnect/core'
@@ -18,8 +18,14 @@ export interface RelayerDeps {
   adminToken?: string
   version?: string
   accounts?: { relayer?: string; sponsor?: string }
-  /** Resolve the caller IP. Behind a proxy, trust only the platform's header. */
+  /** Resolve the caller IP (overrides trustProxyHops). Behind a proxy, trust only the platform's header. */
   ip?: (header: (name: string) => string | undefined) => string
+  /**
+   * Number of trusted reverse proxies in front of the relayer. 0 (default): X-Forwarded-For is ignored and the socket
+   * address is used, so a client cannot pick its own rate-limit bucket. N > 0: the N-th entry from the RIGHT of
+   * X-Forwarded-For is used (the address the outermost trusted proxy saw); entries a client added on the left are ignored.
+   */
+  trustProxyHops?: number
   corsOrigins?: string[]
   /** Migration Meter indexer (enables POST /v1/meter/refresh). */
   meter?: MeterIndexer
@@ -32,7 +38,16 @@ export const MAX_BODY_BYTES = 160 * 1024
 export function createRelayerApp(d: RelayerDeps) {
   const app = new Hono()
   const client = new QoreClient(d.net)
-  const ipOf = d.ip ?? ((h) => h('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown')
+  const hops = d.trustProxyHops ?? 0
+  const clientIp = (c: Context): string => {
+    const h = (n: string) => c.req.header(n)
+    if (d.ip) return d.ip(h)
+    if (hops > 0) {
+      const xff = (h('x-forwarded-for') ?? '').split(',').map((x) => x.trim()).filter(Boolean)
+      if (xff.length >= hops) return xff[xff.length - hops]!
+    }
+    return (c.env as any)?.incoming?.socket?.remoteAddress ?? 'unknown'
+  }
   app.use(
     '*',
     cors({
@@ -77,7 +92,7 @@ export function createRelayerApp(d: RelayerDeps) {
     const body = await c.req.json().catch(() => ({}))
     const out = await d.sponsor.sponsor(
       body,
-      ipOf((n) => c.req.header(n)),
+      clientIp(c),
     )
     if (out.ok) return c.json({ funded: true, amount: out.amount, txHash: out.txHash })
     return c.json({ funded: false, error: out.error }, out.status)
@@ -88,7 +103,7 @@ export function createRelayerApp(d: RelayerDeps) {
     const body = await c.req.json().catch(() => ({}))
     const out = await d.relay.relay(
       body,
-      ipOf((n) => c.req.header(n)),
+      clientIp(c),
     )
     return c.json(out.body, out.status as any)
   })
@@ -206,7 +221,7 @@ export function createRelayerApp(d: RelayerDeps) {
 
   // ---- Doctor (Flow G) ----
   app.get('/v1/doctor/:address', async (c) => {
-    if (!d.store.hit(`doctor:${ipOf((n) => c.req.header(n))}`, 30, 60_000)) return c.json({ error: 'slow down' }, 429)
+    if (!d.store.hit(`doctor:${clientIp(c)}`, 30, 60_000)) return c.json({ error: 'slow down' }, 429)
     try {
       const report = await runDoctor(
         client,

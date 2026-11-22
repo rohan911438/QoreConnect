@@ -51,4 +51,19 @@ describe('relayer hardening', () => {
     expect(codes.slice(0, 30).every((c) => c === 400)).toBe(true)
     expect(codes.slice(30)).toEqual([429, 429])
   })
+
+  it('a client cannot pick its own rate-limit bucket with X-Forwarded-For (code review)', async () => {
+    // Default (no trusted proxy): the header is ignored, so 32 different spoofed IPs still share one bucket.
+    const direct = app()
+    const codes: number[] = []
+    for (let i = 0; i < 32; i++) codes.push((await direct.request('/v1/doctor/hello', { headers: { 'x-forwarded-for': `10.0.0.${i}` } })).status)
+    expect(codes.slice(30)).toEqual([429, 429])
+    // One trusted proxy: the address it appended (rightmost) counts; whatever the client put on the left is ignored.
+    const proxied = app({ trustProxyHops: 1 })
+    const p: number[] = []
+    for (let i = 0; i < 32; i++) p.push((await proxied.request('/v1/doctor/hello', { headers: { 'x-forwarded-for': `6.6.6.${i}, 9.9.9.9` } })).status)
+    expect(p.slice(30)).toEqual([429, 429])
+    // ...and two genuinely different clients behind that proxy get separate buckets.
+    expect((await proxied.request('/v1/doctor/hello', { headers: { 'x-forwarded-for': '8.8.8.8' } })).status).toBe(400)
+  })
 })
