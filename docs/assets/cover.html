@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0}
+body{width:1600px;height:900px;background:#07090d;color:#e9eef3;font-family:'Segoe UI',Inter,system-ui,sans-serif;overflow:hidden;position:relative}
+.bg{position:absolute;inset:0;background:
+ radial-gradient(700px 480px at 20% 20%,rgba(124,242,196,.16),transparent 70%),
+ radial-gradient(640px 460px at 85% 75%,rgba(165,139,255,.18),transparent 70%),
+ linear-gradient(rgba(233,238,243,.05) 1px,transparent 1px) 0 0/48px 48px,
+ linear-gradient(90deg,rgba(233,238,243,.05) 1px,transparent 1px) 0 0/48px 48px}
+.wrap{position:relative;display:grid;grid-template-columns:1.1fr 1fr;align-items:center;height:100%;padding:0 110px;gap:40px}
+.pill{display:inline-block;border:1px solid #1c2530;border-radius:999px;padding:8px 18px;font-size:22px;color:#8e9cab}
+.pill b{color:#7cf2c4;font-weight:600}
+h1{font-size:112px;line-height:1;letter-spacing:-.03em;margin:34px 0 26px;font-weight:700}
+.g{background:linear-gradient(100deg,#7cf2c4,#a58bff);-webkit-background-clip:text;color:transparent}
+p{font-size:38px;color:#8e9cab;line-height:1.3}
+p strong{color:#e9eef3;font-weight:600}
+.foot{position:absolute;left:110px;bottom:56px;font-size:22px;color:#8e9cab}
+.mono{font-family:Consolas,monospace}
+</style></head><body><div class="bg"></div>
+<div class="wrap">
+ <div>
+  <span class="pill">Build Before Q-Day · <b>live on Diana testnet</b></span>
+  <h1>Qore<span class="g">Connect</span></h1>
+  <p><strong>Quantum-safe root. MetaMask convenience.</strong><br>The migration layer for QoreChain's migration year.</p>
+ </div>
+ <svg viewBox="0 0 400 400" width="620" height="620">
+  <defs><radialGradient id="c"><stop offset="0" stop-color="#7cf2c4" stop-opacity=".38"/><stop offset="1" stop-color="#7cf2c4" stop-opacity="0"/></radialGradient>
+  <linearGradient id="r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7cf2c4"/><stop offset="1" stop-color="#a58bff"/></linearGradient></defs>
+  <circle cx="200" cy="200" r="168" fill="none" stroke="#1c2530" stroke-dasharray="2 6"/>
+  <circle cx="200" cy="200" r="104" fill="none" stroke="url(#r)" stroke-opacity=".6" stroke-width="1.5"/>
+  <path d="M200 200 L292 124" stroke="#7cf2c4" stroke-width="1.6" stroke-dasharray="4 7"/>
+  <path d="M200 200 L84 300" stroke="#7cf2c4" stroke-width="1.6" stroke-dasharray="4 7"/>
+  <path d="M200 200 L330 290" stroke="#ff8a80" stroke-opacity=".6" stroke-width="1.4" stroke-dasharray="3 5"/>
+  <circle cx="200" cy="200" r="80" fill="url(#c)"/>
+  <g transform="translate(168 160)"><path d="M32 2 60 13v22c0 19-12 31-28 38C16 66 4 54 4 35V13z" fill="#0d1117" stroke="url(#r)" stroke-width="3.5" stroke-linejoin="round"/>
+   <text x="32" y="42" text-anchor="middle" font-size="11" font-weight="700" fill="#e9eef3" class="mono">ML-DSA</text><text x="32" y="55" text-anchor="middle" font-size="9" fill="#8e9cab" class="mono">87</text></g>
+  <g transform="translate(127 127)"><circle r="17" fill="#0d1117" stroke="#ffcc66" stroke-width="2"/><path d="M-6 3a5 5 0 1 1 4-8l9 0 0 4-3 0 0 3-3 0 0-3-3 0a5 5 0 0 1-4 4z" fill="#ffcc66" transform="translate(-1 1)"/></g>
+  <g transform="translate(292 124)"><circle r="20" fill="#0d1117" stroke="#7cf2c4" stroke-width="2"/><path d="M-7 0l5 5 9-10" stroke="#7cf2c4" stroke-width="2.6" fill="none" stroke-linecap="round"/></g>
+  <g transform="translate(84 300)"><circle r="20" fill="#0d1117" stroke="#7cf2c4" stroke-width="2"/><path d="M-7 0l5 5 9-10" stroke="#7cf2c4" stroke-width="2.6" fill="none" stroke-linecap="round"/></g>
+  <g transform="translate(330 290)"><circle r="20" fill="#3a1513" stroke="#ff8a80" stroke-width="2"/><path d="M-6-6 6 6M6-6-6 6" stroke="#ff8a80" stroke-width="2.6" stroke-linecap="round"/></g>
+  <g class="mono" font-size="11"><text x="127" y="96" text-anchor="middle" fill="#ffcc66">MetaMask · capped</text><text x="330" y="328" text-anchor="middle" fill="#ff8a80">drainer: code 10</text></g>
+ </svg>
+</div>
+<div class="foot">Built on QoreChain · ML-DSA-87 root · capped, scoped, revocable session keys</div>
+</body></html>

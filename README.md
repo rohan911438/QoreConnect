@@ -1,5 +1,7 @@
 # QoreConnect
 
+![QoreConnect: quantum-safe root, MetaMask convenience](docs/assets/cover.png)
+
 > **Quantum-safe root. MetaMask convenience.**
 > The migration layer for QoreChain's migration year: any MetaMask user can use any EVM dApp on QoreChain, with a
 > post-quantum key in control and the classical key capped, scoped and revocable.
@@ -7,7 +9,7 @@
 **Live on QoreChain Diana testnet** (EVM chain 9800). Abstract accounts are testnet-only, so QoreConnect does not run on mainnet.
 Built for *Build Before Q-Day: The QoreChain Developer Fest*. Not audited; use small amounts.
 
-Demo video: *coming with the submission* · Live app: *coming with the deployment*
+Demo video: *coming with the submission* ([script](docs/video-script.md)) · Live app: *coming with the deployment*
 
 ---
 
