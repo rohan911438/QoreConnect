@@ -176,7 +176,7 @@ How AI was used to build it: [`AI_USAGE.md`](AI_USAGE.md). Planning documents: [
 
 Built on QoreChain's official kits: [`@qorechain/sdk`](https://www.npmjs.com/package/@qorechain/sdk) 0.14.0 (accounts,
 hybrid signing, abstract-account messages) and [`@qorechain/pqc`](https://www.npmjs.com/package/@qorechain/pqc) 0.2.3
-(ML-DSA-87). Also wagmi, viem, Next.js, Hono, Foundry and the Anthropic SDK.
+(ML-DSA-87, used through the SDK's `pqcSign`/`pqcVerify`; pinned in `packages/core` so the version is fixed). Also wagmi, viem, Next.js, Hono, Foundry and the Anthropic SDK.
 
 ## Licence
 

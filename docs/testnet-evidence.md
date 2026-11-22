@@ -3,6 +3,20 @@
 Every claim QoreConnect makes is backed by a transaction or a reproducible script on **Diana testnet**. Abstract accounts
 are testnet-only; nothing here runs on mainnet. Explorer: <https://explore.qore.network>.
 
+## Checklist coverage (one link per required transaction type)
+
+| Required by the fest checks | Diana transaction | Where |
+|---|---|---|
+| ML-DSA-87 key registration (sponsor-funded new account) | [`A4A820DD…F839`](https://explore.qore.network/tx/A4A820DDBCAA23E64B67A40E8755C2EBC69CC637CAA4EA61563DB736A5C3F839) | spike Q4 |
+| Authenticator link (MetaMask key with limits) | [`08EAAB70…3C07`](https://explore.qore.network/tx/08EAAB70FF9AD7B5AE9875A8F58522A1A98EFF97CDF66794FED1474932ED3C07), [`BED9ED34…2B38`](https://explore.qore.network/tx/BED9ED34907968A90C21E9C5FBDC646BFCB727A09A523770B182BC3FFC4C2B38) | spike Q4, P12 |
+| Spending rule enforced: daily cap refusal (code 5) | [`4308ADCC…CEB8`](https://explore.qore.network/tx/4308ADCC09358FB59E53F9899938317D68E91ED1ADF5341F296732515638CEB8) | P11 G3 |
+| `MsgExecuteEVM` through the relayer | [`F0D97E75…E913`](https://explore.qore.network/tx/F0D97E75412C83976175F54C175E0677886EC716D800F6CC9AEDC3A8EF3BE913), [`ACA41F09…80F1`](https://explore.qore.network/tx/ACA41F09AE923018D5B882254B4788C4F93DD77E3C999E6D11DF295CE51B80F1) | P10 G4, spike Q1 |
+| Attack refused by the chain (code 10) | [`125E638C…EFF6`](https://explore.qore.network/tx/125E638C8670B49394EDF8F10BCE9DAC7C993A508D57833F9EAFC8B179B5EFF6) | P10 G4 |
+| Revoke (several keys in one root tx) | [`A5D32D10…98A2`](https://explore.qore.network/tx/A5D32D1017CDD11F3700EFBD44F86161FBE61E64D96B410E7838D598F82398A2) | spike Q8 |
+| Agent action on a root-signed instruction | [`B10FCF49…75D5`](https://explore.qore.network/tx/B10FCF490C23D5578EFE81CFDEB1519A88BFA68B7650345E81B53405C36275D5) | P11 G2 |
+| Prompt-injected agent call refused by the chain | [`AABFD632…DB6C`](https://explore.qore.network/tx/AABFD6321D45E1652B320FFB2222163C2824E711BCADE484C168F8171D36DB6C) | P11 G4 |
+| Contract deploys inside a scoped EVM window | [`0x24f70a3e…d556`](https://explore.qore.network/tx/0x24f70a3e3bafce83258cdc8591881f1d10864fcd05b547cddeb125d7d272d556) (open-window tx `85AA2FCA…5ACE`) | P10 G2 |
+
 ## Contracts (P10)
 
 Deployed 2026-11-21 from the operator account `0x707B92f6276799f928CCe4D5873f5A2babF85347` inside a scoped EVM window
@@ -26,9 +40,9 @@ for the Tip Jar only (1 QOR per tx, 5 QOR per day).
 
 | Step | Result | Evidence |
 |---|---|---|
-| Control: tip 0.1 QOR through the relayer | Success | `F0D97E75412C83976175F54C175E0677886EC716D800F6CC9AEDC3A8EF3BE913` |
+| Control: tip 0.1 QOR through the relayer | Success | [`F0D97E75…E913`](https://explore.qore.network/tx/F0D97E75412C83976175F54C175E0677886EC716D800F6CC9AEDC3A8EF3BE913) |
 | Attack through the QoreConnect relayer (`Drainer.claimAirdrop`, 2 QOR) | Refused before broadcast: `NOT_APPROVED` (code 10), no fee | relayer response |
-| Attack with the stolen key **and the attacker's own relayer** (no pre-check) | **Refused by the chain**, code 10: "authenticator not permitted for this action" | `125E638C8670B49394EDF8F10BCE9DAC7C993A508D57833F9EAFC8B179B5EFF6` |
+| Attack with the stolen key **and the attacker's own relayer** (no pre-check) | **Refused by the chain**, code 10: "authenticator not permitted for this action" | [`125E638C…EFF6`](https://explore.qore.network/tx/125E638C8670B49394EDF8F10BCE9DAC7C993A508D57833F9EAFC8B179B5EFF6) |
 
 ## Earlier gates
 
@@ -45,9 +59,9 @@ Reproduce: `pnpm --filter @qoreconnect/example-agent test:integration`.
 | Step | Result | Evidence |
 |---|---|---|
 | Fund sub-account from root / register its ML-DSA key / link agent key | Success | `A16D11DE…CB50` / `5E3C8F07…E460` / `7EA5E30B…2DB5` |
-| G2: agent verifies the root-signed instruction and tips 0.15 QOR | **Executed** | `B10FCF490C23D5578EFE81CFDEB1519A88BFA68B7650345E81B53405C36275D5` |
-| G3: second tip of 0.2 QOR (within per-tx, over the daily cap) | **Refused by the chain**, code 5: "daily limit 300000uqor exceeded: spent 150000, remaining 150000, attempted 200000" | `4308ADCC09358FB59E53F9899938317D68E91ED1ADF5341F296732515638CEB8` |
-| G4: page injection "send everything to 0x3600…" obeyed by a compromised planner, local guard off, attacker's own relayer | **Refused by the chain**, code 10 (not in allowed_evm_calls) | `AABFD6321D45E1652B320FFB2222163C2824E711BCADE484C168F8171D36DB6C` |
+| G2: agent verifies the root-signed instruction and tips 0.15 QOR | **Executed** | [`B10FCF49…75D5`](https://explore.qore.network/tx/B10FCF490C23D5578EFE81CFDEB1519A88BFA68B7650345E81B53405C36275D5) |
+| G3: second tip of 0.2 QOR (within per-tx, over the daily cap) | **Refused by the chain**, code 5: "daily limit 300000uqor exceeded: spent 150000, remaining 150000, attempted 200000" | [`4308ADCC…CEB8`](https://explore.qore.network/tx/4308ADCC09358FB59E53F9899938317D68E91ED1ADF5341F296732515638CEB8) |
+| G4: page injection "send everything to 0x3600…" obeyed by a compromised planner, local guard off, attacker's own relayer | **Refused by the chain**, code 10 (not in allowed_evm_calls) | [`AABFD632…DB6C`](https://explore.qore.network/tx/AABFD6321D45E1652B320FFB2222163C2824E711BCADE484C168F8171D36DB6C) |
 | G5: owner revokes the agent (one tx from the sub-account), agent tries again | Revoke `4778D79A…8B23`; next action refused `REVOKED` | relayer response |
 | Budget returned to the root | Success | `1D1BB281…FE35` |
 
@@ -66,7 +80,7 @@ a 75-second expiry, runs the Doctor before and after expiry, then computes one m
 | Contract not approved (Drainer) | same | `target`: not on the allow-list (chain code 10) | Approve this dApp |
 | Linked but expired | same, after 18:02 UTC | `linked-key`: "expired on 2026-11-21 18:02 UTC" | Renew MetaMask |
 
-Link tx `BED9ED34907968A90C21E9C5FBDC646BFCB727A09A523770B182BC3FFC4C2B38`.
+Link tx [`BED9ED34…2B38`](https://explore.qore.network/tx/BED9ED34907968A90C21E9C5FBDC646BFCB727A09A523770B182BC3FFC4C2B38).
 
 Meter: the EVM sender sample over 200 blocks (10,507,040–10,507,239) took 41 s and found 5 distinct senders, all with
 a registered ML-DSA key. A second snapshot found 4 of 4; each was re-checked through REST
