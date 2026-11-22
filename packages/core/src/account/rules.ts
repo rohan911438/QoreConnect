@@ -54,9 +54,15 @@ function place(rules: Rule[], managed: Rule): Rule[] {
   return [managed, ...rules.filter((r) => r.id !== MANAGED_RULE_ID)]
 }
 
-/** The rule set to write when linking a key: managed rule with these contracts and limits, others preserved. */
-export function mergeForLink(rules: Rule[], contracts: string[], limits: Limits = DEFAULT_LIMITS): Rule[] {
+/**
+ * The rule set to write when linking a key: managed rule with these contracts and limits, others preserved.
+ * Without explicit limits, the account's current limits are kept (re-linking or renewing must never reset custom
+ * limits to the defaults); a first link uses DEFAULT_LIMITS.
+ */
+export function mergeForLink(rules: Rule[], contracts: string[], explicit?: Limits): Rule[] {
   const existing = managedRule(rules)
+  const limits: Limits =
+    explicit ?? (existing ? { perTxUqor: existing.perTxLimit, dailyUqor: existing.dailyLimit } : DEFAULT_LIMITS)
   const calls = uniq([...withoutSentinel(existing?.allowedEvmCalls ?? []), ...contracts.map(normaliseCall)])
   return place(rules, {
     id: MANAGED_RULE_ID,
@@ -92,15 +98,23 @@ export function mergeLimits(rules: Rule[], limits: Limits): Rule[] {
   const m = managedRule(rules)
   if (!m) throw new Error('no QoreConnect rule on this account: link a key first')
   if (limits.perTxUqor <= 0n && limits.dailyUqor <= 0n) throw new Error('at least one of perTx or daily must be > 0')
-  if (limits.dailyUqor > 0n && limits.perTxUqor > limits.dailyUqor) throw new Error('per-transaction limit cannot exceed the daily limit')
-  return place(rules, { ...m, perTxLimit: limits.perTxUqor, dailyLimit: limits.dailyUqor, allowedDenoms: limits.denoms ?? m.allowedDenoms })
+  if (limits.dailyUqor > 0n && limits.perTxUqor > limits.dailyUqor)
+    throw new Error('per-transaction limit cannot exceed the daily limit')
+  return place(rules, {
+    ...m,
+    perTxLimit: limits.perTxUqor,
+    dailyLimit: limits.dailyUqor,
+    allowedDenoms: limits.denoms ?? m.allowedDenoms,
+  })
 }
 
 /** Does this rule bound every denom (the chain's condition for keys with value permissions)? */
 export function ruleBoundsEveryDenom(r: Rule): boolean {
   if (r.perTxLimit > 0n || r.dailyLimit > 0n) return true
   if (!r.allowedDenoms.length) return false
-  return r.allowedDenoms.every((d) => r.denomLimits?.some((l) => l.denom === d && (BigInt(l.perTxLimit || 0) > 0n || BigInt(l.dailyLimit || 0) > 0n)))
+  return r.allowedDenoms.every((d) =>
+    r.denomLimits?.some((l) => l.denom === d && (BigInt(l.perTxLimit || 0) > 0n || BigInt(l.dailyLimit || 0) > 0n)),
+  )
 }
 
 export class RuleInvariantError extends Error {}
@@ -120,15 +134,24 @@ const VALUE_PERMISSIONS = ['send', 'evm', 'deploy', 'svm', 'all']
  * 2. That first enabled rule is the QoreConnect rule (so our caps are the ones that apply).
  * 3. Its allow-list is never empty (empty would mean "any contract").
  */
-export function assertRuleInvariants(state: { rules: Rule[]; keys: KeyView[] }, nowUnix = Math.floor(Date.now() / 1000)): void {
+export function assertRuleInvariants(
+  state: { rules: Rule[]; keys: KeyView[] },
+  nowUnix = Math.floor(Date.now() / 1000),
+): void {
   const active = state.keys.filter((k) => !k.revoked && (k.expiryUnix === 0 || k.expiryUnix > nowUnix))
   const valueKeys = active.filter((k) => k.permissions.some((p) => VALUE_PERMISSIONS.includes(p)))
   if (!valueKeys.length) return
   const first = state.rules.find((r) => r.enabled)
-  if (!first) throw new RuleInvariantError(`${valueKeys.length} active key(s) can move value but the account has no enabled rule`)
-  if (!ruleBoundsEveryDenom(first)) throw new RuleInvariantError(`first enabled rule "${first.id}" does not bound every denom`)
-  if (first.id !== MANAGED_RULE_ID) throw new RuleInvariantError(`first enabled rule is "${first.id}", not the QoreConnect rule; QoreConnect caps would not apply`)
-  if (!first.allowedEvmCalls.length) throw new RuleInvariantError('QoreConnect rule has an empty allow-list, which would allow any contract')
+  if (!first)
+    throw new RuleInvariantError(`${valueKeys.length} active key(s) can move value but the account has no enabled rule`)
+  if (!ruleBoundsEveryDenom(first))
+    throw new RuleInvariantError(`first enabled rule "${first.id}" does not bound every denom`)
+  if (first.id !== MANAGED_RULE_ID)
+    throw new RuleInvariantError(
+      `first enabled rule is "${first.id}", not the QoreConnect rule; QoreConnect caps would not apply`,
+    )
+  if (!first.allowedEvmCalls.length)
+    throw new RuleInvariantError('QoreConnect rule has an empty allow-list, which would allow any contract')
 }
 
 /** Shape the SDK's link/update builders accept. */

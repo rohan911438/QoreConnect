@@ -188,7 +188,14 @@ export default function DoctorPage() {
           </ol>
           <p className="text-xs text-muted">
             Account <span className="font-mono">{report.account}</span> · checked{' '}
-            {new Date(report.checkedAt).toISOString().slice(0, 19).replace('T', ' ')} UTC · Diana testnet
+            {new Date(report.checkedAt).toISOString().slice(0, 19).replace('T', ' ')} UTC · Diana testnet ·{' '}
+            <Link
+              href={`/exposure/${report.account}`}
+              className="underline underline-offset-2 hover:text-fg"
+              data-testid="doctor-exposure"
+            >
+              Q-Day exposure of this account
+            </Link>
           </p>
         </section>
       )}

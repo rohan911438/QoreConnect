@@ -39,8 +39,16 @@ export interface SpendingRuleInfo {
   denomLimits: { denom: string; perTxLimit: string; dailyLimit: string }[]
 }
 
+export interface PqcParams {
+  /** "required" on Diana (22 Nov 2026): every transaction from an account with a PQC key must carry the hybrid signature. */
+  hybridSignatureMode: string
+  allowClassicalFallback: boolean
+  pqcPrimary: boolean
+}
+
 const isNotFound = (e: unknown) =>
-  (e instanceof HttpError && (e.status === 404 || /not found/i.test(e.body))) || /not found|404/i.test(String((e as any)?.message ?? e))
+  (e instanceof HttpError && (e.status === 404 || /not found/i.test(e.body))) ||
+  /not found|404/i.test(String((e as any)?.message ?? e))
 
 /**
  * Typed, read-only QoreChain client over REST. `net.rest` may be a same-origin proxy (`/api/qore`) in browsers.
@@ -58,7 +66,10 @@ export class QoreClient {
 
   async getBalance(address: string, denom = 'uqor'): Promise<bigint> {
     try {
-      const j = await getJson<any>(`${this.net.rest}/cosmos/bank/v1beta1/balances/${address}/by_denom?denom=${denom}`, this.fetchImpl)
+      const j = await getJson<any>(
+        `${this.net.rest}/cosmos/bank/v1beta1/balances/${address}/by_denom?denom=${denom}`,
+        this.fetchImpl,
+      )
       return BigInt(j.balance?.amount ?? 0)
     } catch (e) {
       if (isNotFound(e)) return 0n
@@ -85,7 +96,12 @@ export class QoreClient {
       if (isNotFound(e)) return { registered: false, possessionProven: false }
       throw e
     }
-    return { registered: !!st.registered, possessionProven: !!st.possessionProven, publicKey: pqcStatusPublicKey(st), algorithmId: st.algorithmId }
+    return {
+      registered: !!st.registered,
+      possessionProven: !!st.possessionProven,
+      publicKey: pqcStatusPublicKey(st),
+      algorithmId: st.algorithmId,
+    }
   }
 
   async getAuthenticators(address: string): Promise<AuthenticatorInfo[]> {
@@ -145,6 +161,33 @@ export class QoreClient {
     }
   }
 
+  /**
+   * Whether the account has revealed a classical public key on-chain (it appears once the account signs a transaction).
+   * Before that, only the hash of the key (the address) is public.
+   */
+  async getAccountPubkey(address: string): Promise<{ exists: boolean; pubkeyType?: string }> {
+    try {
+      const j = await getJson<any>(`${this.net.rest}/cosmos/auth/v1beta1/accounts/${address}`, this.fetchImpl)
+      const a = j.account ?? {}
+      const pk = a.pub_key ?? a.base_account?.pub_key
+      return { exists: true, pubkeyType: pk?.['@type'] ?? undefined }
+    } catch (e) {
+      if (isNotFound(e)) return { exists: false }
+      throw e
+    }
+  }
+
+  /** Chain-wide PQC parameters, e.g. whether hybrid signatures are required and classical fallback is allowed. */
+  async getPqcParams(): Promise<PqcParams> {
+    const j = await getJson<any>(`${this.net.rest}/qorechain/pqc/v1/params`, this.fetchImpl)
+    const p = j.params ?? {}
+    return {
+      hybridSignatureMode: String(p.hybrid_signature_mode_name ?? p.hybrid_signature_mode ?? 'unknown'),
+      allowClassicalFallback: p.allow_classical_fallback === true,
+      pqcPrimary: p.pqc_primary === true,
+    }
+  }
+
   async getLatestHeight(): Promise<number> {
     const j = await getJson<any>(`${this.net.rest}/cosmos/base/tendermint/v1beta1/blocks/latest`, this.fetchImpl)
     return Number(j.block?.header?.height ?? j.sdk_block?.header?.height ?? 0)
@@ -160,6 +203,7 @@ export const REST_PROXY_ALLOWLIST = [
   '/qorechain/pqc/v1/account/',
   '/qorechain/pqc/v1/protocol_features',
   '/qorechain/pqc/v1/evm_limits',
+  '/qorechain/pqc/v1/params',
   '/qorechain/abstractaccount/v1/',
   '/qorechain/multilayer/v1/',
 ] as const

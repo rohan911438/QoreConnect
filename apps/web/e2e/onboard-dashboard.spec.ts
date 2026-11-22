@@ -25,7 +25,8 @@ async function installMetaMask(page: Page) {
     const listeners: Record<string, Listener[]> = {}
     ;(window as any).ethereum = {
       isMetaMask: true,
-      request: ({ method, params }: { method: string; params?: any[] }) => (window as any).__qcMetaMask(method, params ?? []),
+      request: ({ method, params }: { method: string; params?: any[] }) =>
+        (window as any).__qcMetaMask(method, params ?? []),
       on: (e: string, f: Listener) => ((listeners[e] ??= []).push(f), undefined),
       removeListener: (e: string, f: Listener) => void (listeners[e] = (listeners[e] ?? []).filter((x) => x !== f)),
     }
@@ -39,12 +40,28 @@ async function installPasskey(page: Page): Promise<boolean> {
   await cdp.send('WebAuthn.enable')
   try {
     await cdp.send('WebAuthn.addVirtualAuthenticator', {
-      options: { protocol: 'ctap2', ctap2Version: 'ctap2_1', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true, hasPrf: true } as any,
+      options: {
+        protocol: 'ctap2',
+        ctap2Version: 'ctap2_1',
+        transport: 'internal',
+        hasResidentKey: true,
+        hasUserVerification: true,
+        isUserVerified: true,
+        automaticPresenceSimulation: true,
+        hasPrf: true,
+      } as any,
     })
     return true
   } catch {
     await cdp.send('WebAuthn.addVirtualAuthenticator', {
-      options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true },
+      options: {
+        protocol: 'ctap2',
+        transport: 'internal',
+        hasResidentKey: true,
+        hasUserVerification: true,
+        isUserVerified: true,
+        automaticPresenceSimulation: true,
+      },
     })
     return false
   }
@@ -87,20 +104,60 @@ test('landing → onboard → dashboard shows the key → revoke all → none', 
   await expect(keys).toContainText(mm.address.toLowerCase())
   await expect(page.getByTestId('damage-cap')).toContainText('QOR per day')
   const qor = (await page.getByTestId('qor-address').textContent())?.trim()
+  await expect(keys.getByTestId('key-countdown')).toHaveText(/Expires in (6|7) d/)
+  const unlockIfAsked = async () => {
+    const u = page.getByTestId('qc-unlock')
+    if (
+      path === 'password' &&
+      (await u
+        .waitFor({ timeout: 5_000 })
+        .then(() => true)
+        .catch(() => false))
+    ) {
+      await u.locator('input[type=password]').fill(PASSWORD)
+      await u.getByRole('button', { name: 'Unlock' }).click()
+    }
+  }
+
+  // 3b. Limit presets: Everyday is current; switch to Cautious (0.25 QOR per tx, 1 QOR per day, 1-day keys).
+  await expect(page.getByTestId('preset-everyday')).toContainText('current')
+  await page.getByTestId('preset-cautious').click()
+  await expect(page.getByTestId('limits-summary')).toContainText('Send up to 0.25 QOR in one transaction')
+  await page.getByTestId('limits-save').click()
+  await unlockIfAsked()
+  await expect(page.getByText('Limits set: 0.25 QOR per transaction')).toBeVisible({ timeout: 180_000 })
+  await expect(page.getByTestId('preset-cautious')).toContainText('current', { timeout: 60_000 })
+
+  // 3c. Renew: same key, lifetime from the Cautious preset (1 day); limits must stay Cautious.
+  await page.getByTestId('renew-key').click()
+  await unlockIfAsked()
+  await expect(page.getByText(/Renewed until/)).toBeVisible({ timeout: 180_000 })
+  expect(mm.signatures()).toBe(2) // the renewal's possession proof
+  await expect(keys.getByTestId('key-countdown')).toHaveText(/Expires in (23 h|1 d)/, { timeout: 60_000 })
+  await expect(page.getByTestId('preset-cautious')).toContainText('current')
+  await expect(page.getByTestId('damage-cap')).toContainText('1 QOR per day')
 
   // 4. Q-Day kill switch
   await page.getByTestId('kill-switch').click()
   // The root may still be unlocked from onboarding (5-minute auto-lock); otherwise the password prompt appears.
-  const unlock = page.getByTestId('qc-unlock')
-  if (path === 'password' && (await unlock.waitFor({ timeout: 5_000 }).then(() => true).catch(() => false))) {
-    await unlock.locator('input[type=password]').fill(PASSWORD)
-    await unlock.getByRole('button', { name: 'Unlock' }).click()
-  }
-  await expect(page.getByTestId('kill-success')).toHaveText('Only your quantum-safe root key can act now.', { timeout: 180_000 })
+  await unlockIfAsked()
+  await expect(page.getByTestId('kill-success')).toHaveText('Only your quantum-safe root key can act now.', {
+    timeout: 180_000,
+  })
   await expect(page.getByTestId('no-keys')).toBeVisible()
   await expect(page.getByTestId('damage-cap')).toContainText('No classical key can act')
 
-  console.log(JSON.stringify({ path, prf, account: qor, metamask: mm.address, onboardMs, totalMs: Date.now() - t0, signatures: mm.signatures() }))
+  console.log(
+    JSON.stringify({
+      path,
+      prf,
+      account: qor,
+      metamask: mm.address,
+      onboardMs,
+      totalMs: Date.now() - t0,
+      signatures: mm.signatures(),
+    }),
+  )
 })
 
 test('360 px: no horizontal scroll on landing and account pages', async ({ page }) => {
@@ -108,7 +165,9 @@ test('360 px: no horizontal scroll on landing and account pages', async ({ page 
   for (const path of ['/', '/account']) {
     await page.goto(path)
     await page.waitForLoadState('networkidle')
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    )
     expect(overflow, path).toBeLessThanOrEqual(0)
   }
 })

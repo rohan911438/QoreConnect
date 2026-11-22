@@ -7,6 +7,7 @@ import { Logo } from './Logo'
 type Theme = 'system' | 'light' | 'dark'
 
 const NAV = [
+  { href: '/exposure', label: 'Q-Day' },
   { href: '/meter', label: 'Meter' },
   { href: '/doctor', label: 'Doctor' },
   { href: '/account', label: 'Account' },
@@ -83,8 +84,8 @@ export function Header() {
             <Link
               key={n.href}
               href={n.href}
-              aria-current={path === n.href ? 'page' : undefined}
-              className={`rounded-xl px-2 py-1.5 transition sm:px-3 ${path === n.href ? 'bg-panel-2 font-medium text-fg' : 'text-muted hover:text-fg'}`}
+              aria-current={path === n.href || path.startsWith(n.href + '/') ? 'page' : undefined}
+              className={`rounded-xl px-2 py-1.5 transition sm:px-3 ${path === n.href || path.startsWith(n.href + '/') ? 'bg-panel-2 font-medium text-fg' : 'text-muted hover:text-fg'}`}
             >
               {n.label}
             </Link>

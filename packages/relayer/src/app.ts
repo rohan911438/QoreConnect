@@ -8,6 +8,7 @@ import type { RelayService } from './relay'
 import { timingSafeEqual } from 'node:crypto'
 import { meterHeadline, meterPoint, type MeterIndexer } from './meter'
 import { DoctorInputError, runDoctor } from './doctor'
+import { runExposure, type ExposureChain } from './exposure'
 
 export interface RelayerDeps {
   net: QoreNetwork
@@ -43,7 +44,10 @@ export function createRelayerApp(d: RelayerDeps) {
     const h = (n: string) => c.req.header(n)
     if (d.ip) return d.ip(h)
     if (hops > 0) {
-      const xff = (h('x-forwarded-for') ?? '').split(',').map((x) => x.trim()).filter(Boolean)
+      const xff = (h('x-forwarded-for') ?? '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean)
       if (xff.length >= hops) return xff[xff.length - hops]!
     }
     return (c.env as any)?.incoming?.socket?.remoteAddress ?? 'unknown'
@@ -59,7 +63,10 @@ export function createRelayerApp(d: RelayerDeps) {
   // Input size limit: the largest valid request is a relay with 64 KiB calldata (~130 KB as hex JSON).
   app.use(
     '/v1/*',
-    bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => c.json({ error: `request body over ${MAX_BODY_BYTES} bytes` }, 413) }),
+    bodyLimit({
+      maxSize: MAX_BODY_BYTES,
+      onError: (c) => c.json({ error: `request body over ${MAX_BODY_BYTES} bytes` }, 413),
+    }),
   )
 
   app.get('/health', async (c) => {
@@ -90,10 +97,7 @@ export function createRelayerApp(d: RelayerDeps) {
 
   app.post('/v1/sponsor', async (c) => {
     const body = await c.req.json().catch(() => ({}))
-    const out = await d.sponsor.sponsor(
-      body,
-      clientIp(c),
-    )
+    const out = await d.sponsor.sponsor(body, clientIp(c))
     if (out.ok) return c.json({ funded: true, amount: out.amount, txHash: out.txHash })
     return c.json({ funded: false, error: out.error }, out.status)
   })
@@ -101,10 +105,7 @@ export function createRelayerApp(d: RelayerDeps) {
   app.post('/v1/relay', async (c) => {
     if (!d.relay) return c.json({ ok: false, error: 'relay disabled' }, 503)
     const body = await c.req.json().catch(() => ({}))
-    const out = await d.relay.relay(
-      body,
-      clientIp(c),
-    )
+    const out = await d.relay.relay(body, clientIp(c))
     return c.json(out.body, out.status as any)
   })
 
@@ -202,7 +203,9 @@ export function createRelayerApp(d: RelayerDeps) {
   })
   app.get('/v1/meter/series', (c) => {
     c.header('cache-control', 'public, max-age=60')
-    return c.json({ points: d.store.meterSnapshots(2000).map((s) => meterPoint({ ...JSON.parse(s), evidence: undefined })) })
+    return c.json({
+      points: d.store.meterSnapshots(2000).map((s) => meterPoint({ ...JSON.parse(s), evidence: undefined })),
+    })
   })
   app.get('/v1/meter/evidence/:metric', (c) => {
     const m = c.req.param('metric')
@@ -225,10 +228,45 @@ export function createRelayerApp(d: RelayerDeps) {
     try {
       const report = await runDoctor(
         client,
-        { address: c.req.param('address'), target: c.req.query('target'), selector: c.req.query('selector'), tankId: c.req.query('tank'), signer: c.req.query('signer') },
+        {
+          address: c.req.param('address'),
+          target: c.req.query('target'),
+          selector: c.req.query('selector'),
+          tankId: c.req.query('tank'),
+          signer: c.req.query('signer'),
+        },
         { getTank: (id) => d.store.getTank(id) },
       )
       return c.json(report)
+    } catch (e) {
+      if (e instanceof DoctorInputError) return c.json({ error: e.message }, 400)
+      return c.json({ error: `chain query failed: ${(e as Error).message}` }, 502)
+    }
+  })
+
+  // ---- Q-Day exposure report ----
+  const exposureChain: ExposureChain = {
+    getBalance: (a) => client.getBalance(a),
+    getPqcKey: (a) => client.getPqcKey(a),
+    getPqcParams: () => client.getPqcParams(),
+    getAccountPubkey: (a) => client.getAccountPubkey(a),
+    getAuthenticators: (a) => client.getAuthenticators(a),
+    getSpendingRules: (a) => client.getSpendingRules(a),
+    getEvmNonce: async (evm) => {
+      const r = await fetch(d.net.evmRpc, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getTransactionCount', params: [evm, 'latest'] }),
+        signal: AbortSignal.timeout(15_000),
+      })
+      const j: any = await r.json()
+      return Number.parseInt(j.result ?? '0x0', 16) || 0
+    },
+  }
+  app.get('/v1/exposure/:address', async (c) => {
+    if (!d.store.hit(`exposure:${clientIp(c)}`, 30, 60_000)) return c.json({ error: 'slow down' }, 429)
+    try {
+      return c.json(await runExposure(exposureChain, { address: c.req.param('address') }))
     } catch (e) {
       if (e instanceof DoctorInputError) return c.json({ error: e.message }, 400)
       return c.json({ error: `chain query failed: ${(e as Error).message}` }, 502)

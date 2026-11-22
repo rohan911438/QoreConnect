@@ -1,13 +1,36 @@
 import { describe, expect, it } from 'vitest'
 import {
-  MANAGED_RULE_ID, NO_DAPP_SENTINEL, assertRuleInvariants, mergeApprove, mergeForLink, mergeLimits, mergeRemove, normaliseCall, RuleInvariantError, type Rule,
+  DEFAULT_LIMITS,
+  MANAGED_RULE_ID,
+  NO_DAPP_SENTINEL,
+  assertRuleInvariants,
+  mergeApprove,
+  mergeForLink,
+  mergeLimits,
+  mergeRemove,
+  normaliseCall,
+  RuleInvariantError,
+  type Rule,
 } from '../src/index'
 
 const A = '0xfa1643e3fbd2f58d8dbaf4ec025c2541062ffc74'
 const B = '0x5017fbbc1de44e698d1778630bce63741c1d0005'
 const C = '0x1111111111111111111111111111111111111111'
-const other: Rule = { id: 'treasury', enabled: true, perTxLimit: 9n, dailyLimit: 99n, allowedDenoms: ['uqor'], allowedEvmCalls: [C] }
-const key = (o: Partial<{ revoked: boolean; permissions: string[]; expiryUnix: number }> = {}) => ({ pubkeyHex: '02ab', permissions: ['evm'], revoked: false, expiryUnix: 0, ...o })
+const other: Rule = {
+  id: 'treasury',
+  enabled: true,
+  perTxLimit: 9n,
+  dailyLimit: 99n,
+  allowedDenoms: ['uqor'],
+  allowedEvmCalls: [C],
+}
+const key = (o: Partial<{ revoked: boolean; permissions: string[]; expiryUnix: number }> = {}) => ({
+  pubkeyHex: '02ab',
+  permissions: ['evm'],
+  revoked: false,
+  expiryUnix: 0,
+  ...o,
+})
 
 describe('rule merge (G1: no rule lost)', () => {
   it('link creates the managed rule first and keeps other rules unchanged', () => {
@@ -63,14 +86,38 @@ describe('assertRuleInvariants', () => {
     expect(() => assertRuleInvariants({ rules: [], keys: [key()] })).toThrow(RuleInvariantError)
   })
   it('fails when another rule would bound the key instead of ours', () => {
-    expect(() => assertRuleInvariants({ rules: [other, ...mergeForLink([], [A])], keys: [key()] })).toThrow(/not the QoreConnect rule/)
+    expect(() => assertRuleInvariants({ rules: [other, ...mergeForLink([], [A])], keys: [key()] })).toThrow(
+      /not the QoreConnect rule/,
+    )
   })
   it('fails for an unbounded rule or empty allow-list', () => {
     const m = mergeForLink([], [A])[0]!
-    expect(() => assertRuleInvariants({ rules: [{ ...m, perTxLimit: 0n, dailyLimit: 0n }], keys: [key()] })).toThrow(/bound/)
+    expect(() => assertRuleInvariants({ rules: [{ ...m, perTxLimit: 0n, dailyLimit: 0n }], keys: [key()] })).toThrow(
+      /bound/,
+    )
     expect(() => assertRuleInvariants({ rules: [{ ...m, allowedEvmCalls: [] }], keys: [key()] })).toThrow(/empty/)
   })
   it('ignores revoked and expired keys', () => {
-    expect(() => assertRuleInvariants({ rules: [], keys: [key({ revoked: true }), key({ expiryUnix: 1 })] })).not.toThrow()
+    expect(() =>
+      assertRuleInvariants({ rules: [], keys: [key({ revoked: true }), key({ expiryUnix: 1 })] }),
+    ).not.toThrow()
+  })
+})
+
+describe('re-linking keeps limits (P15 renew)', () => {
+  it('a link without explicit limits keeps the current custom limits', () => {
+    const custom = mergeLimits(mergeForLink([], [A]), { perTxUqor: 250_000n, dailyUqor: 1_000_000n })
+    const relinked = mergeForLink(custom, [A])
+    expect(relinked[0]).toMatchObject({ perTxLimit: 250_000n, dailyLimit: 1_000_000n })
+  })
+  it('a first link uses the defaults; explicit limits always win', () => {
+    expect(mergeForLink([], [A])[0]).toMatchObject({
+      perTxLimit: DEFAULT_LIMITS.perTxUqor,
+      dailyLimit: DEFAULT_LIMITS.dailyUqor,
+    })
+    expect(mergeForLink(mergeForLink([], [A]), [A], { perTxUqor: 3n, dailyUqor: 9n })[0]).toMatchObject({
+      perTxLimit: 3n,
+      dailyLimit: 9n,
+    })
   })
 })

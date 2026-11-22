@@ -12,9 +12,10 @@ import { RestBroadcaster, type Broadcaster, type TxResult } from '../chain/tx'
 import type { FetchLike } from '../chain/http'
 import type { RootSigner } from '../vault/signer'
 import type { Eip1193Provider, LinkProof } from '../onboard'
+import { matchPreset } from './presets'
 import {
-  DEFAULT_LIMITS,
   MANAGED_RULE_ID,
+  managedRule,
   assertRuleInvariants,
   mergeApprove,
   mergeForLink,
@@ -111,11 +112,7 @@ export async function linkSessionKey(
   const { client } = parts(ctx)
   const proof = ctx.proof ?? (await signLinkProof(ctx.net, ctx.root.qorAddress, ctx.metamask!, ctx.metamaskAddress))
   const address = proof.metamaskAddress
-  const rules = mergeForLink(
-    await client.getSpendingRules(ctx.root.qorAddress),
-    ctx.contracts,
-    ctx.limits ?? DEFAULT_LIMITS,
-  )
+  const rules = mergeForLink(await client.getSpendingRules(ctx.root.qorAddress), ctx.contracts, ctx.limits)
   const msgs = linkAuthenticatorMsgs({
     owner: ctx.root.qorAddress,
     chainId: ctx.net.chainId,
@@ -129,6 +126,36 @@ export async function linkSessionKey(
   })
   const r = await writeAndCheck(ctx, msgs)
   return { ...r, pubkeyHex: hex(proof.pubkey), metamaskAddress: address }
+}
+
+/**
+ * Renew a MetaMask key: register the same key again with a new expiry. Contracts and limits stay as they are.
+ * Verified on Diana (renew.test.ts): re-registering replaces the entry, whether the key is active, expired or revoked.
+ * The lifetime defaults to the one of the matching limit preset (e.g. 1 day for Cautious), else 7 days.
+ * Costs one MetaMask signature (possession proof) and one root signature.
+ */
+export async function renewSessionKey(
+  ctx: AccountContext & {
+    metamask?: Eip1193Provider
+    metamaskAddress?: string
+    proof?: LinkProof
+    ttlSeconds?: number
+    nowMs?: number
+  },
+) {
+  const { client } = parts(ctx)
+  const rule = managedRule(await client.getSpendingRules(ctx.root.qorAddress))
+  if (!rule) throw new QoreConnectError('NO_RULE')
+  const ttl = ctx.ttlSeconds ?? renewTtlSeconds(rule.perTxLimit, rule.dailyLimit)
+  const expiryUnix = Math.floor((ctx.nowMs ?? Date.now()) / 1000) + ttl
+  const r = await linkSessionKey({ ...ctx, contracts: [], expiryUnix })
+  return { ...r, expiryUnix }
+}
+
+/** Lifetime for a renewal: the matching preset's, else the default 7 days. */
+export function renewTtlSeconds(perTxUqor: bigint, dailyUqor: bigint): number {
+  const p = matchPreset(perTxUqor, dailyUqor)
+  return p ? p.ttlDays * 86_400 : DEFAULT_SESSION_TTL_S
 }
 
 /** Ask MetaMask for the authenticator-link possession proof (one personal_sign; reused for sponsorship and linking). */

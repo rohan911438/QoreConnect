@@ -10,12 +10,16 @@ import {
   explorerTx,
   formatQor,
   getSessionState,
-  linkSessionKey,
+  renewSessionKey,
+  renewTtlSeconds,
   parseQor,
   approveDapp,
   removeDapp,
   revokeKeys,
   setLimits,
+  LIMIT_PRESETS,
+  describeLimits,
+  matchPreset,
   type Protection,
   type RelayActivity,
   type SessionState,
@@ -24,7 +28,8 @@ import { UnlockPrompt } from '@qoreconnect/react'
 import { ConnectButton } from '../../components/ConnectButton'
 import { AgentsPanel } from '../../components/AgentsPanel'
 import { PageHeader } from '../../components/PageHeader'
-import { CONTRACT_NAMES, DEFAULT_CONTRACTS, RECOVERY_PROMPT_UQOR, RELAYER_URL, qore } from '../../lib/qore'
+import { CONTRACT_NAMES, RECOVERY_PROMPT_UQOR, RELAYER_URL, qore } from '../../lib/qore'
+import { timeLeft } from '../../lib/time'
 
 type Info = { qorAddress: string; evmAddress: string; kdf: string }
 type Data = {
@@ -36,6 +41,8 @@ type Data = {
 
 const short = (a: string, n = 6) => (a.length > 2 * n + 1 ? `${a.slice(0, n)}…${a.slice(-4)}` : a)
 const errText = (e: unknown) => (e instanceof QoreConnectError ? e.message : e instanceof Error ? e.message : String(e))
+const SOON_S = 24 * 3600
+
 const BLOCKED_CODES = new Set(['LIMIT_EXCEEDED', 'NOT_APPROVED', 'EXPIRED', 'REVOKED', 'NO_RULE'])
 
 function Card({
@@ -129,6 +136,12 @@ export default function AccountPage() {
   const [notice, setNotice] = useState<{ tone: 'ok' | 'bad'; text: ReactNode }>()
   const [killed, setKilled] = useState(false)
   const [mmAddress, setMmAddress] = useState<string>()
+  // Ticks every 30 s so key countdowns stay current.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
   /** Set by the Doctor's "Approve this dApp" fix: /account?approve=0x…#dapps */
   const [approveTarget, setApproveTarget] = useState<string>()
 
@@ -241,6 +254,20 @@ export default function AccountPage() {
   const allKeys = state?.keys.filter((k) => !k.revoked) ?? []
   const rootActive = !!data?.pqc.registered && !!data?.pqc.possessionProven
   const dailyCap = rule && classical.length ? rule.dailyLimit : 0n
+  const renewDays = rule ? renewTtlSeconds(rule.perTxLimit, rule.dailyLimit) / 86_400 : 7
+  const renewLabel = `Renew for ${renewDays} day${renewDays === 1 ? '' : 's'}`
+  // The MetaMask key that needs attention: the connected one if linked, else the one expiring first.
+  const mmKeys = allKeys.filter((k) => k.isMetaMask && k.expiryUnix > 0)
+  const focusKey =
+    mmKeys.find((k) => mmAddress && ('0x' + k.pubkeyHex).toLowerCase() === mmAddress.toLowerCase()) ??
+    [...mmKeys].sort((a, b) => a.expiryUnix - b.expiryUnix)[0]
+  const focusLeft = focusKey ? focusKey.expiryUnix - Math.floor(now / 1000) : Infinity
+  const renew = (addr: string) =>
+    rootAction(renewLabel, async ({ root }) => {
+      const mm = await qore().provider.upstream()
+      const r = await renewSessionKey({ net, root, metamask: mm, metamaskAddress: addr })
+      return `Renewed until ${new Date(r.expiryUnix * 1000).toLocaleString()}. Your limits and approved dApps are unchanged.`
+    })
 
   return (
     <div className="space-y-6">
@@ -284,6 +311,32 @@ export default function AccountPage() {
       )}
 
       {data && data.balance >= RECOVERY_PROMPT_UQOR && <RecoveryNudge />}
+
+      {focusKey && focusLeft < SOON_S && (
+        <div
+          role="alert"
+          data-testid="expiry-alert"
+          className={`qw-rise flex flex-col gap-3 rounded-2xl border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between ${focusLeft <= 0 ? 'border-bad/30 bg-bad-bg text-bad' : 'border-warn/30 bg-warn-bg text-warn'}`}
+        >
+          <span>
+            {focusLeft <= 0
+              ? `Your MetaMask key ${short('0x' + focusKey.pubkeyHex)} has expired, so dApps cannot use it. Renew it to keep your limits and approved dApps.`
+              : `Your MetaMask key ${short('0x' + focusKey.pubkeyHex)} expires in ${timeLeft(focusKey.expiryUnix, now)}.`}
+          </span>
+          {mmAddress && ('0x' + focusKey.pubkeyHex).toLowerCase() === mmAddress.toLowerCase() ? (
+            <Btn
+              tone="primary"
+              disabled={!!busy}
+              onClick={() => renew('0x' + focusKey.pubkeyHex)}
+              testId="expiry-renew"
+            >
+              {renewLabel}
+            </Btn>
+          ) : (
+            <span className="font-medium">Connect this MetaMask to renew it.</span>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
@@ -364,7 +417,8 @@ export default function AccountPage() {
               <ul className="divide-y divide-line" data-testid="key-list">
                 {allKeys.map((k) => {
                   const addr = '0x' + k.pubkeyHex
-                  const expired = k.expiryUnix > 0 && k.expiryUnix * 1000 < Date.now()
+                  const expired = k.expiryUnix > 0 && k.expiryUnix * 1000 < now
+                  const soon = !expired && k.expiryUnix > 0 && k.expiryUnix - now / 1000 < SOON_S
                   const isCurrent = mmAddress && addr.toLowerCase() === mmAddress.toLowerCase()
                   return (
                     <li
@@ -381,30 +435,27 @@ export default function AccountPage() {
                           <Mono>{addr}</Mono>
                         </div>
                         <div className="text-muted">
-                          {k.expiryUnix ? `Expires ${new Date(k.expiryUnix * 1000).toLocaleString()}` : 'No expiry'}
+                          {k.expiryUnix ? (
+                            <span
+                              className={soon ? 'font-medium text-warn' : undefined}
+                              data-testid="key-countdown"
+                              title={new Date(k.expiryUnix * 1000).toLocaleString()}
+                            >
+                              {expired
+                                ? `Expired ${new Date(k.expiryUnix * 1000).toLocaleString()}`
+                                : `Expires in ${timeLeft(k.expiryUnix, now)}`}
+                            </span>
+                          ) : (
+                            'No expiry'
+                          )}
                           {rule &&
                             ` · ${formatQor(rule.perTxLimit)} QOR per tx · ${formatQor(rule.dailyLimit)} QOR per day`}
                           {` · ${state.approved.length} approved contract${state.approved.length === 1 ? '' : 's'}`}
                         </div>
                       </div>
                       <div className="flex shrink-0 gap-2">
-                        <Btn
-                          disabled={!!busy || !isCurrent}
-                          onClick={() =>
-                            rootAction('Renew this key for 7 days', async ({ root }) => {
-                              const mm = await qore().provider.upstream()
-                              await linkSessionKey({
-                                net,
-                                root,
-                                metamask: mm,
-                                metamaskAddress: addr,
-                                contracts: state.approved.length ? state.approved : DEFAULT_CONTRACTS,
-                              })
-                              return 'Renewed for 7 days.'
-                            })
-                          }
-                        >
-                          Renew
+                        <Btn disabled={!!busy || !isCurrent} testId="renew-key" onClick={() => renew(addr)}>
+                          {renewLabel}
                         </Btn>
                         <Btn
                           testId="revoke-one"
@@ -511,6 +562,7 @@ export default function AccountPage() {
             <LimitsEditor
               perTx={rule.perTxLimit}
               daily={rule.dailyLimit}
+              approvedDapps={state?.approved.length ?? 0}
               busy={!!busy}
               onSave={(perTxUqor, dailyUqor) =>
                 rootAction('Change your limits', async ({ root }) => {
@@ -661,14 +713,24 @@ export default function AccountPage() {
   )
 }
 
+const tryQor = (v: string): bigint | undefined => {
+  try {
+    return parseQor(v)
+  } catch {
+    return undefined
+  }
+}
+
 function LimitsEditor({
   perTx,
   daily,
+  approvedDapps,
   busy,
   onSave,
 }: {
   perTx: bigint
   daily: bigint
+  approvedDapps: number
   busy: boolean
   onSave: (perTx: bigint, daily: bigint) => void
 }) {
@@ -691,11 +753,63 @@ function LimitsEditor({
       setErr(errText(e))
     }
   }
+  const x = tryQor(a)
+  const y = tryQor(b)
+  const current = matchPreset(perTx, daily)
+  const picked = x !== undefined && y !== undefined ? matchPreset(x, y) : undefined
+  const changed = x !== perTx || y !== daily
+  const summary =
+    x !== undefined && y !== undefined && x > 0n && y > 0n
+      ? describeLimits({ perTxUqor: x, dailyUqor: y, ttlDays: picked?.ttlDays }, { approvedDapps })
+      : undefined
   return (
     <Card title="Limits" id="limits">
       <p className="mb-4 text-sm text-muted">
         The chain enforces these for every classical key on this account. Changing them needs your quantum-safe root.
+        {current ? (
+          <>
+            {' '}
+            Current profile: <strong className="text-fg">{current.name}</strong>.
+          </>
+        ) : (
+          <> Current profile: custom.</>
+        )}
       </p>
+      <div
+        className="mb-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
+        role="group"
+        aria-label="Safety profiles"
+        data-testid="limit-presets"
+      >
+        {LIMIT_PRESETS.map((p) => {
+          const on = picked?.id === p.id
+          return (
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={on}
+              data-testid={`preset-${p.id}`}
+              onClick={() => {
+                setA(formatQor(p.perTxUqor))
+                setB(formatQor(p.dailyUqor))
+                setErr(undefined)
+              }}
+              className={`rounded-2xl border p-3 text-left transition ${on ? 'border-accent bg-panel-2 shadow-[0_0_0_3px_color-mix(in_oklab,var(--accent)_18%,transparent)]' : 'border-line hover:border-muted'}`}
+            >
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="font-medium">{p.name}</span>
+                {current?.id === p.id && (
+                  <span className="text-[11px] uppercase tracking-wider text-muted">current</span>
+                )}
+              </span>
+              <span className="mt-1 block font-mono text-xs text-muted">
+                {formatQor(p.perTxUqor)} / tx · {formatQor(p.dailyUqor)} / day · {p.ttlDays}d
+              </span>
+              <span className="mt-1.5 block text-xs leading-snug text-muted">{p.tagline}</span>
+            </button>
+          )
+        })}
+      </div>
       <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <label className="grid gap-1.5 text-sm font-medium">
           <span>Per transaction (QOR)</span>
@@ -705,10 +819,33 @@ function LimitsEditor({
           <span>Per day (QOR)</span>
           <input inputMode="decimal" className="qw-input" value={b} onChange={(e) => setB(e.target.value)} />
         </label>
-        <Btn tone="primary" onClick={save} disabled={busy}>
+        <Btn tone="primary" onClick={save} disabled={busy || !changed} testId="limits-save">
           Save with passkey
         </Btn>
       </div>
+      {summary && (
+        <div
+          className="mt-5 grid gap-4 rounded-2xl border border-line p-4 text-sm sm:grid-cols-2"
+          data-testid="limits-summary"
+        >
+          <div>
+            <p className="mb-2 font-medium text-ok">With these limits MetaMask can</p>
+            <ul className="space-y-1.5 text-muted">
+              {summary.can.map((l) => (
+                <li key={l}>✓ {l}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="mb-2 font-medium text-bad">MetaMask cannot</p>
+            <ul className="space-y-1.5 text-muted">
+              {summary.cannot.map((l) => (
+                <li key={l}>✕ {l}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
       {err && (
         <p role="alert" className="mt-3 text-sm text-bad">
           {err}
