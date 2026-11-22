@@ -19,6 +19,7 @@ import {
   RootVault,
   assertRuleInvariants,
   fetchTxResult,
+  fromRelayRequest,
   getSessionState,
   isSameCall,
   linkSessionKey,
@@ -70,7 +71,8 @@ describe.skipIf(!MNEMONIC)('invariants on Diana (integration)', () => {
     const relayerAcct = await operatorAccount(MNEMONIC!, Number(process.env.RELAYER_INDEX ?? 1))
     const store = new RelayerStore(':memory:')
     store.createTank({ id: 'inv', name: 'Invariants', owner: 'test', balanceUqor: 20_000_000n, perUserDailyCapUqor: 5_000_000n })
-    const svc = new RelayService(DIANA, store, new ChainRelay(DIANA, relayerAcct), { perAccountPerMinute: 30, perIpPerMinute: 60, maxGasLimit: 3_000_000 })
+    const chain = new ChainRelay(DIANA, relayerAcct)
+    const svc = new RelayService(DIANA, store, chain, { perAccountPerMinute: 30, perIpPerMinute: 60, maxGasLimit: 3_000_000 })
     const sign = (data: string, valueWei = 0n) =>
       signRelayRequest({ net: DIANA, ethereum: mm, metamaskAddress: mm.address, account: root.qorAddress, to: COUNTER, data, valueWei, tankId: 'inv', gasLimit: 200_000, fetch: fetchImpl })
     const chainSuccess = async (hash: string, call: { to: string; data: string; valueWei: bigint }) => {
@@ -95,20 +97,26 @@ describe.skipIf(!MNEMONIC)('invariants on Diana (integration)', () => {
     expect(replay.body).toMatchObject({ code: 'NONCE', preRejected: true })
     expect(store.getTank('inv')!.balanceUqor).toBe(tank)
 
-    // I4 (failure branch): 0.4 + 0.4 QOR against a 0.6 QOR daily limit; the chain refuses the second, and so does the relayer.
+    // I4 (failure branch): 0.4 + 0.4 QOR against a 0.6 QOR daily limit. The relayer refuses the second before broadcast
+    // (it counts today's spend), without debiting the tank; sent straight to the chain, as an attacker's own relayer would,
+    // the same signed call is refused by the chain too, so the relayer's answer matches the chain's.
     const tip = encodeFunctionData({ abi, functionName: 'tip' })
     const t1 = await svc.relay(await sign(tip, (4n * QOR) / 10n), 'test')
     expect(t1.body).toMatchObject({ ok: true, success: true })
-    const t2 = await svc.relay(await sign(tip, (4n * QOR) / 10n), 'test')
-    expect(t2.body).toMatchObject({ success: false, code: 'LIMIT_EXCEEDED' })
-    expect(await chainSuccess(t2.body.txHash!, { to: COUNTER, data: tip, valueWei: (4n * QOR) / 10n })).toBe(false)
+    const over = await sign(tip, (4n * QOR) / 10n)
+    const tankBefore = store.getTank('inv')!.balanceUqor
+    const t2 = await svc.relay(over, 'test')
+    expect(t2.body).toMatchObject({ ok: false, code: 'LIMIT_EXCEEDED', preRejected: true })
+    expect(store.getTank('inv')!.balanceUqor).toBe(tankBefore)
+    const direct = await chain.submit(fromRelayRequest(over, chain.relayerAddress), Number(over.gasLimit))
+    expect(await chainSuccess(direct.transactionHash, { to: COUNTER, data: tip, valueWei: (4n * QOR) / 10n })).toBe(false)
 
     // I1 still holds at the end; I5: nothing secret was sent.
     const end = await getSessionState(ctx, root.qorAddress)
     expect(() => assertRuleInvariants(end)).not.toThrow()
     expect(d.scanned).toBeGreaterThan(10)
     expect(d.leaks).toEqual([])
-    console.log(JSON.stringify({ root: root.qorAddress, scanned: d.scanned, success: ok.body.txHash, refused: t2.body.txHash }, null, 2))
+    console.log(JSON.stringify({ root: root.qorAddress, scanned: d.scanned, success: ok.body.txHash, refused: direct.transactionHash }, null, 2))
     root.lock()
   })
 })
