@@ -9,7 +9,7 @@
 **Live on QoreChain Diana testnet** (EVM chain 9800). Abstract accounts are testnet-only, so QoreConnect does not run on mainnet.
 Built for *Build Before Q-Day: The QoreChain Developer Fest*. Not audited; use small amounts.
 
-Demo video: *coming with the submission* ([script](docs/video-script.md)) · Live app: <https://qoreconnect-web.vercel.app> · Demo dApp: <https://qoreconnect-demo.vercel.app> (the hosted relayer is not up yet, so onboarding works only against a local relayer for now) · [Benchmark](docs/benchmark.md)
+Demo video: *coming with the submission* ([script](docs/video-script.md)) · Live app: <https://qoreconnect-web.vercel.app> · Demo dApp: <https://qoreconnect-demo.vercel.app> · Relayer: <https://qoreconnect-relayer.onrender.com/health> (free plan: the first request after it has been idle can take about a minute) · [Benchmark](docs/benchmark.md)
 
 ---
 

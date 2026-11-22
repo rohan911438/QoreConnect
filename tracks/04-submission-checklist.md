@@ -42,7 +42,7 @@ Everything required to submit, from build.qorechain.io rules and /start. There i
 - [x] Transaction hashes listed in README with explorer links (https://explore.qore.network) *(docs/testnet-evidence.md, linked from README)*
 - [x] Only **Diana testnet** activity counts for checks
 - [x] Deployed web app reachable (Vercel URL) *(https://qoreconnect-web.vercel.app and https://qoreconnect-demo.vercel.app, 22 Nov)*
-- [ ] Relayer reachable and funded until at least 16 Dec (judging and demo show) *(blocked: Render returned 402 billing_suspended on 22 Nov)*
+- [x] Relayer reachable and funded until at least 16 Dec (judging and demo show) *(https://qoreconnect-relayer.onrender.com, live 22 Nov; onboarding E2E passes against production; sponsor 53.1 QOR, relayer 17.3 QOR)*
 - [ ] Sponsor and relayer balances topped up (faucet: once per 24 h per account; plan ahead)
 - [x] CI green on the default branch *(green on main, 22 Nov)*
 
