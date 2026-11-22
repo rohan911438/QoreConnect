@@ -35,7 +35,17 @@ const relayerAccount = await operatorAccount(relayerMnemonic!, Number(process.en
 // Both operator accounts sign hybrid transactions, so their ML-DSA-87 keys must be registered.
 // SKIP_KEY_BOOTSTRAP=1 is only for container smoke tests with throwaway, unfunded keys.
 for (const a of process.env.SKIP_KEY_BOOTSTRAP === '1' ? [] : [sponsorAccount, relayerAccount]) {
-  const r = await ensurePqcRegistered(net, a)
+  // Diana sometimes drops a request; one failed lookup must not stop the relayer from starting (5 tries, 2-32 s apart).
+  let r: Awaited<ReturnType<typeof ensurePqcRegistered>> | undefined
+  for (let attempt = 1; !r; attempt++) {
+    try {
+      r = await ensurePqcRegistered(net, a)
+    } catch (e) {
+      if (attempt >= 5) throw e
+      console.warn(`key check for ${a.cosmos} failed (${(e as Error).message}); retrying (${attempt}/5)`)
+      await new Promise((res) => setTimeout(res, 2_000 * 2 ** (attempt - 1)))
+    }
+  }
   if (r.txHash) console.log(`registered ML-DSA key for ${a.cosmos}: ${r.txHash}`)
 }
 
