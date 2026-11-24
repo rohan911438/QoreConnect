@@ -104,6 +104,23 @@ pnpm test:integration                        # live on Diana (needs the operator
 pnpm demo:attack                             # a drainer dApp tries to empty a QoreConnect account and is refused
 ```
 
+### Install from npm
+
+| Package | Install | Use it for |
+|---|---|---|
+| [`@rohankumar4179/wagmi`](https://www.npmjs.com/package/@rohankumar4179/wagmi) | `npm i @rohankumar4179/wagmi` | wagmi connector: add QoreConnect to an existing dApp |
+| [`@rohankumar4179/react`](https://www.npmjs.com/package/@rohankumar4179/react) | `npm i @rohankumar4179/react` | Onboarding, signing preview, approval and unlock screens |
+| [`@rohankumar4179/core`](https://www.npmjs.com/package/@rohankumar4179/core) | `npm i @rohankumar4179/core` | Root vault, session keys, EIP-1193 provider, agents (wallets, dashboards, non-wagmi apps) |
+| [`@rohankumar4179/relayer`](https://www.npmjs.com/package/@rohankumar4179/relayer) | `npm i @rohankumar4179/relayer` | Run your own relayer, sponsor and gas tanks (Node 22.5+) |
+
+For a dApp you need the connector and the UI (wagmi v2):
+
+```bash
+npm install @rohankumar4179/wagmi @rohankumar4179/react wagmi@2 viem @tanstack/react-query
+```
+
+Each package's npm page explains what it does, how it compares, and how to use it.
+
 ### Integrate a dApp (wagmi)
 
 ```ts
@@ -126,10 +143,10 @@ Your existing `useWriteContract` and `useWaitForTransactionReceipt` code works u
 
 | Path | What it is |
 |---|---|
-| `packages/core` | Root vault, chain client, session keys and rules, EIP-1193 provider, signing preview, agent instructions |
-| `packages/wagmi` | wagmi connector and `qoreTransport()` |
-| `packages/react` | Onboarding modal, approval sheet, signing preview, unlock prompt |
-| `packages/relayer` | Relayer, sponsor, gas tanks, Migration Meter indexer, Doctor |
+| `packages/core` | Root vault, chain client, session keys and rules, EIP-1193 provider, signing preview, agent instructions ([npm](https://www.npmjs.com/package/@rohankumar4179/core)) |
+| `packages/wagmi` | wagmi connector and `qoreTransport()` ([npm](https://www.npmjs.com/package/@rohankumar4179/wagmi)) |
+| `packages/react` | Onboarding modal, approval sheet, signing preview, unlock prompt ([npm](https://www.npmjs.com/package/@rohankumar4179/react)) |
+| `packages/relayer` | Relayer, sponsor, gas tanks, Migration Meter indexer, Doctor ([npm](https://www.npmjs.com/package/@rohankumar4179/relayer)) |
 | `apps/relayer` | The relayer server (Hono, Docker) |
 | `apps/web` | Next.js app: landing, onboarding, dashboard with kill switch and agents, `/meter`, `/doctor` |
 | `apps/demo-dapp` | Quantum Tip Jar (Vite + wagmi) and the attack page |
@@ -170,7 +187,9 @@ The threat model, every mitigation with its code and test, and the invariants ar
 | Tip Jar demo dApp and attack demo | Shipped |
 | Agent mode (root-signed instructions, sub-accounts) | Shipped (live Claude run needs an API key; deterministic planner verified on Diana) |
 | Migration Meter and Doctor | Shipped |
-| Hosted deployment, npm packages | In progress |
+| Hosted deployment (web and demo on Vercel, relayer on Render) | Shipped |
+| npm packages (`@rohankumar4179/core`, `react`, `wagmi`, `relayer` 0.1.0) | Shipped |
+| Demo video | In progress |
 
 ## Hackathon
 
