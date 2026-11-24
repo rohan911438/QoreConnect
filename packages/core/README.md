@@ -1,4 +1,4 @@
-# @qoreconnect/core
+# @rohankumar4179/core
 
 **Quantum-safe root. MetaMask convenience.** The engine behind QoreConnect: a post-quantum (ML-DSA-87) root account
 in the browser, MetaMask linked as a capped session key, a signing preview that never lets the user sign blind, and an
@@ -8,11 +8,11 @@ EIP-1193 provider any EVM dApp can use on QoreChain.
 > Not audited; use small amounts.
 
 ```bash
-npm install @qoreconnect/core
+npm install @rohankumar4179/core
 ```
 
-Most dApps should not use this package directly: use [`@qoreconnect/wagmi`](https://www.npmjs.com/package/@qoreconnect/wagmi)
-(a wagmi connector) and [`@qoreconnect/react`](https://www.npmjs.com/package/@qoreconnect/react) (the UI). Use `core`
+Most dApps should not use this package directly: use [`@rohankumar4179/wagmi`](https://www.npmjs.com/package/@rohankumar4179/wagmi)
+(a wagmi connector) and [`@rohankumar4179/react`](https://www.npmjs.com/package/@rohankumar4179/react) (the UI). Use `core`
 when you build a wallet, a dashboard, an agent, or a non-wagmi integration.
 
 ---
@@ -23,9 +23,9 @@ QoreChain only accepts EVM transactions from accounts that have a registered pos
 cannot hold that key, so a MetaMask user cannot send a single transaction to a QoreChain EVM dApp. Every dApp team would
 otherwise rebuild the same key setup, onboarding and relayer code.
 
-`@qoreconnect/core` solves it once:
+`@rohankumar4179/core` solves it once:
 
-| | MetaMask alone | Write it yourself | **@qoreconnect/core** |
+| | MetaMask alone | Write it yourself | **@rohankumar4179/core** |
 |---|---|---|---|
 | Send an EVM tx on QoreChain | Not possible (no ML-DSA key) | Possible, after weeks of work | **1 passkey tap + 1 MetaMask signature** |
 | Who is in control | The classical key, fully | Whatever you build | **The ML-DSA-87 root**; MetaMask is capped |
@@ -47,7 +47,7 @@ otherwise rebuild the same key setup, onboarding and relayer code.
 | Token approvals | `approvalInCalldata`, `revokeCalldata`, `prepareTokenRevoke` | Detect ERC-20 / NFT approvals in calldata and revoke them. |
 | EIP-1193 provider | `QoreConnectProvider`, `discoverMetaMask`, `announceProvider` | A standard provider for dApps. Accounts are the quantum-safe root; MetaMask signs; the relayer pays gas. Announced over EIP-6963 so wallet pickers list it. |
 | Signing preview | `buildPreview`, `decodeCall` | Decodes the call (ABI, known selectors, 4byte), simulates it and checks it against the chain's rules **before** MetaMask is asked to sign. |
-| Relayer client | `RelayerClient`, `signRelayRequest` | Talk to a QoreConnect relayer (`@qoreconnect/relayer`). |
+| Relayer client | `RelayerClient`, `signRelayRequest` | Talk to a QoreConnect relayer (`@rohankumar4179/relayer`). |
 | Agents | `createAgent`, `signInstruction`, `verifyInstruction`, `listAgents`, `revokeAgent`, `reclaimAgentFunds` | Give an AI agent its own funded, capped sub-account that only acts on ML-DSA-87-signed instructions from the root. |
 | Chain | `QoreClient`, `DIANA`, `formatQor`, `parseQor`, `explorerTx` | Read keys, authenticators, spending rules, balances; network config and unit helpers. |
 | Errors | `QoreConnectError`, `userMessage`, `classifyChainRefusal` | Typed error codes (`LIMIT_EXCEEDED`, `NOT_APPROVED`, `REVOKED`, `TANK_EMPTY`, …) with user-facing messages. |
@@ -57,13 +57,13 @@ otherwise rebuild the same key setup, onboarding and relayer code.
 ### 1. Use it as a provider in any EVM dApp
 
 ```ts
-import { QoreConnectProvider } from '@qoreconnect/core'
+import { QoreConnectProvider } from '@rohankumar4179/core'
 import { createWalletClient, custom } from 'viem'
 
 const provider = new QoreConnectProvider({
   appName: 'My dApp',
   contracts: ['0xYourContract'],          // or '0xTarget/0xSelector' to allow one function only
-  relayerUrl: 'https://your-relayer',      // a @qoreconnect/relayer server
+  relayerUrl: 'https://your-relayer',      // a @rohankumar4179/relayer server
   gasTankId: 'my-dapp',                    // gas tank that pays your users' fees
 })
 
@@ -73,14 +73,14 @@ await wallet.sendTransaction({ account, to: '0xYourContract', data: '0x…' })
 ```
 
 `eth_sendTransaction` builds the preview, asks MetaMask for one signature as the session key, and sends it through the
-relayer. Pass `hooks` (or use `@qoreconnect/react`) to show onboarding, approval and preview screens.
+relayer. Pass `hooks` (or use `@rohankumar4179/react`) to show onboarding, approval and preview screens.
 
 Extra RPC methods: `qoreconnect_sessionKey` (the MetaMask address) and `qoreconnect_root` (the root account).
 
 ### 2. Onboard a user in one call
 
 ```ts
-import { DIANA, RootVault, WebAuthnPasskeyProvider, onboardAndLink, presetLimits, presetById } from '@qoreconnect/core'
+import { DIANA, RootVault, WebAuthnPasskeyProvider, onboardAndLink, presetLimits, presetById } from '@rohankumar4179/core'
 
 const result = await onboardAndLink({
   net: DIANA,
@@ -99,7 +99,7 @@ console.log(result.root.qorAddress, `${result.ms} ms`)
 ### 3. Manage the account (dashboards)
 
 ```ts
-import { DIANA, RootVault, getSessionState, setLimits, approveDapp, revokeKeys, parseQor } from '@qoreconnect/core'
+import { DIANA, RootVault, getSessionState, setLimits, approveDapp, revokeKeys, parseQor } from '@rohankumar4179/core'
 
 const root = await new RootVault().unlock({ kind: 'password', password: '…' })
 const ctx = { net: DIANA, root }
@@ -115,7 +115,7 @@ await revokeKeys({ ...ctx, keys: 'all-classical' })
 ### 4. Show a preview before anything is signed
 
 ```ts
-import { buildPreview } from '@qoreconnect/core'
+import { buildPreview } from '@rohankumar4179/core'
 
 const preview = await buildPreview(call, { net: DIANA, rootEvm, rule, approved })
 preview.label      // 'Quantum-safe' | 'Classical, capped' | 'Agent, capped' | 'Blocked by chain'
@@ -128,7 +128,7 @@ preview.willFail   // the call would revert
 ### 5. Give an AI agent a capped account
 
 ```ts
-import { createAgent, verifyInstruction } from '@qoreconnect/core'
+import { createAgent, verifyInstruction } from '@rohankumar4179/core'
 
 // Root side: fund a sub-account, link the agent's key with tight limits, sign its instructions with ML-DSA-87.
 const agent = await createAgent({
@@ -156,9 +156,9 @@ A complete agent is in [`examples/agent`](https://github.com/rohan911438/QoreCon
 
 ## Related packages
 
-- [`@qoreconnect/wagmi`](https://www.npmjs.com/package/@qoreconnect/wagmi): wagmi connector built on this provider
-- [`@qoreconnect/react`](https://www.npmjs.com/package/@qoreconnect/react): onboarding, approval, preview and unlock UI
-- [`@qoreconnect/relayer`](https://www.npmjs.com/package/@qoreconnect/relayer): the relayer, sponsor and gas tanks
+- [`@rohankumar4179/wagmi`](https://www.npmjs.com/package/@rohankumar4179/wagmi): wagmi connector built on this provider
+- [`@rohankumar4179/react`](https://www.npmjs.com/package/@rohankumar4179/react): onboarding, approval, preview and unlock UI
+- [`@rohankumar4179/relayer`](https://www.npmjs.com/package/@rohankumar4179/relayer): the relayer, sponsor and gas tanks
 
 Built on QoreChain's [`@qorechain/sdk`](https://www.npmjs.com/package/@qorechain/sdk) and
 [`@qorechain/pqc`](https://www.npmjs.com/package/@qorechain/pqc). Project: [QoreConnect](https://github.com/rohan911438/QoreConnect) ·

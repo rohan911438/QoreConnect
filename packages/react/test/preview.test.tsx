@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { buildPreview, DIANA } from '@qoreconnect/core'
+import { buildPreview, DIANA } from '@rohankumar4179/core'
 import { QoreConnectProvider, SigningPreview, createQoreConnectUI } from '../src/index'
 
 const ROOT = 'qor10z0spuhkwp0dzr0sx4rhl3ed83z8pe8yk9848s'

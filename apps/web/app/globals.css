@@ -24,7 +24,7 @@
 }
 
 /*
- * Web-app styles use the qw- prefix. The qc- prefix belongs to @qoreconnect/react (modal, sheets); sharing a name once
+ * Web-app styles use the qw- prefix. The qc- prefix belongs to @rohankumar4179/react (modal, sheets); sharing a name once
  * made the onboarding modal inherit pointer-events:none from the page backdrop.
  */
 

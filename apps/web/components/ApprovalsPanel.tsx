@@ -8,7 +8,7 @@ import {
   revokeCalldata,
   type QoreNetwork,
   type RootSigner,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 import { RELAYER_URL, qore } from '../lib/qore'
 
 type RootAction = (label: string, fn: (ctx: { root: RootSigner }) => Promise<ReactNode>) => Promise<void>

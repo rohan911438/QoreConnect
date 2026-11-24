@@ -7,7 +7,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk'
 import { parseEther, type Hex } from 'viem'
-import type { AgentInstruction } from '@qoreconnect/core'
+import type { AgentInstruction } from '@rohankumar4179/core'
 import { encodeToolCall, toolsFor, type PlannedCall, type ToolSpec } from './tools'
 import type { ExecOutcome } from './executor'
 

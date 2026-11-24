@@ -13,7 +13,7 @@
  * approvals are not listed (only ERC-20 allowances and setApprovalForAll operators).
  */
 
-import type { ApprovalKind } from '@qoreconnect/core'
+import type { ApprovalKind } from '@rohankumar4179/core'
 
 /** keccak256("Approval(address,address,uint256)") */
 export const APPROVAL_TOPIC = '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925'
@@ -264,4 +264,4 @@ export class ApprovalScanner {
   }
 }
 
-export { approvalInCalldata, revokeCalldata } from '@qoreconnect/core'
+export { approvalInCalldata, revokeCalldata } from '@rohankumar4179/core'

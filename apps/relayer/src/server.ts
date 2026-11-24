@@ -2,8 +2,8 @@ import { config } from 'dotenv'
 import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { serve } from '@hono/node-server'
-import { DIANA, QoreClient, type QoreNetwork } from '@qoreconnect/core'
-import { ChainFundsSender, ChainRelay, ensurePqcRegistered, DEFAULT_SPONSOR, MeterIndexer, RelayService, RelayerStore, RpcEvmSampler, SponsorService, createRelayerApp, operatorAccount, RelayedApprovalIndex, restPages } from '@qoreconnect/relayer'
+import { DIANA, QoreClient, type QoreNetwork } from '@rohankumar4179/core'
+import { ChainFundsSender, ChainRelay, ensurePqcRegistered, DEFAULT_SPONSOR, MeterIndexer, RelayService, RelayerStore, RpcEvmSampler, SponsorService, createRelayerApp, operatorAccount, RelayedApprovalIndex, restPages } from '@rohankumar4179/relayer'
 
 // Load the repo-root .env first, then a local one (local wins).
 config({ path: resolve(import.meta.dirname, '../../../.env') })

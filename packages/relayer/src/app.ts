@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono'
 import { cors } from 'hono/cors'
 import { bodyLimit } from 'hono/body-limit'
-import { QoreClient, type QoreNetwork } from '@qoreconnect/core'
+import { QoreClient, type QoreNetwork } from '@rohankumar4179/core'
 import type { RelayerStore } from './store'
 import type { SponsorService } from './sponsor'
 import type { RelayService } from './relay'

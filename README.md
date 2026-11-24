@@ -53,7 +53,7 @@ only once most EVM traffic already signs hybrid.
 ```mermaid
 flowchart LR
   subgraph Browser["User's browser"]
-    DAPP["Any EVM dApp (wagmi)"] --> CONN["@qoreconnect/wagmi"]
+    DAPP["Any EVM dApp (wagmi)"] --> CONN["@rohankumar4179/wagmi"]
     CONN --> UI["Preview, approval, onboarding"]
     UI --> VAULT["Root vault: ML-DSA-87 + secp256k1, passkey-encrypted"]
     UI -- "personal_sign" --> MM["MetaMask (classical session key)"]
@@ -108,8 +108,8 @@ pnpm demo:attack                             # a drainer dApp tries to empty a Q
 
 ```ts
 import { createConfig } from 'wagmi'
-import { qoreConnect, qoreTransport, qorechainDiana } from '@qoreconnect/wagmi'
-import { createQoreConnectUI } from '@qoreconnect/react'
+import { qoreConnect, qoreTransport, qorechainDiana } from '@rohankumar4179/wagmi'
+import { createQoreConnectUI } from '@rohankumar4179/react'
 
 export const ui = createQoreConnectUI()
 export const config = createConfig({
@@ -117,7 +117,7 @@ export const config = createConfig({
   connectors: [qoreConnect({ appName: 'My dApp', contracts: ['0xYourContract'], gasTankId: 'my-dapp', relayerUrl: 'https://your-relayer', ui: ui.hooks })],
   transports: { [qorechainDiana.id]: qoreTransport() },
 })
-// and render <QoreConnectProvider ui={ui}> from @qoreconnect/react once, near the root of your app.
+// and render <QoreConnectProvider ui={ui}> from @rohankumar4179/react once, near the root of your app.
 ```
 
 Your existing `useWriteContract` and `useWaitForTransactionReceipt` code works unchanged.

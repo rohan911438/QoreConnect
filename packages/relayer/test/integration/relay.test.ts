@@ -1,7 +1,7 @@
 /** P06 G2–G5 on Diana: relay success, over-limit (pre-rejected and on-chain), replay, 5 parallel relays. */
 import { describe, expect, it } from 'vitest'
 import { createPublicClient, encodeFunctionData, http, parseAbi } from 'viem'
-import { DIANA, approveDapp, linkSessionKey, setLimits, signRelayRequest, type RelayRequest } from '@qoreconnect/core'
+import { DIANA, approveDapp, linkSessionKey, setLimits, signRelayRequest, type RelayRequest } from '@rohankumar4179/core'
 import { ChainRelay, RelayService, RelayerStore, operatorAccount } from '../../src/index'
 import { MNEMONIC, freshRoot, standInMetaMask } from './helpers'
 

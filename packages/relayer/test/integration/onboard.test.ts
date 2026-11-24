@@ -7,7 +7,7 @@ import { config } from 'dotenv'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
-import { DIANA, MemoryVaultStorage, QoreClient, RootVault, explorerTx, formatQor, onboardRoot, type Eip1193Provider, type OnboardEvent } from '@qoreconnect/core'
+import { DIANA, MemoryVaultStorage, QoreClient, RootVault, explorerTx, formatQor, onboardRoot, type Eip1193Provider, type OnboardEvent } from '@rohankumar4179/core'
 import { ChainFundsSender, RelayerStore, SponsorService, createRelayerApp, operatorAccount, DEFAULT_SPONSOR } from '../../src/index'
 
 config({ path: resolve(import.meta.dirname, '../../../../.env'), quiet: true } as any)
@@ -55,7 +55,7 @@ describe.skipIf(!MNEMONIC)('onboarding on Diana (integration)', () => {
     expect(again.alreadyRegistered).toBe(true)
 
     // G3 against the live service: a second sponsorship for the same MetaMask is refused.
-    const second = await (await import('@qoreconnect/core')).requestSponsorship({ net: DIANA, relayerUrl: RELAYER, rootAddress: 'qor17fuv7k0c9mw0suwkxreganyq2me9c8xmdl9s7p', ethereum: mm, fetch: fetchImpl }).catch((e) => e)
+    const second = await (await import('@rohankumar4179/core')).requestSponsorship({ net: DIANA, relayerUrl: RELAYER, rootAddress: 'qor17fuv7k0c9mw0suwkxreganyq2me9c8xmdl9s7p', ethereum: mm, fetch: fetchImpl }).catch((e) => e)
     expect(second).toMatchObject({ code: 'SPONSOR_REFUSED' })
     root.lock()
   })

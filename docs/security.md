@@ -50,7 +50,7 @@ mitigates it and the test that proves it (P13, gate G3). File references are `pa
 | I4 | Success only when the chain says `success=true` for this call | `packages/core/test/provider.test.ts` | `invariants.test.ts` |
 | I5 | No private key or seed is sent over the network | `packages/core/test/invariants.test.ts` | `invariants.test.ts` (every URL, body and broadcast transaction scanned) |
 
-**Diana run, 22 Nov 2026: I1–I5 pass** (`pnpm --filter @qoreconnect/relayer test:integration -- invariants`). 54 outbound requests scanned, no leak. Relayed success [`90309F3C…D8E9`](https://explore.qore.network/tx/90309F3CCA99A8F40A217975563DE6DFB9165F95C44D94ADC3CF9A24792DD8E9); the over-daily-limit call was refused by the relayer before broadcast (no fee) and, sent straight to the chain, refused there too [`DC736DE9…A91E`](https://explore.qore.network/tx/DC736DE9E0C09BB6FFCFB9E6FD53756FA571E56D61214D46DCA7950A900AA91E).
+**Diana run, 22 Nov 2026: I1–I5 pass** (`pnpm --filter @rohankumar4179/relayer test:integration -- invariants`). 54 outbound requests scanned, no leak. Relayed success [`90309F3C…D8E9`](https://explore.qore.network/tx/90309F3CCA99A8F40A217975563DE6DFB9165F95C44D94ADC3CF9A24792DD8E9); the over-daily-limit call was refused by the relayer before broadcast (no fee) and, sent straight to the chain, refused there too [`DC736DE9…A91E`](https://explore.qore.network/tx/DC736DE9E0C09BB6FFCFB9E6FD53756FA571E56D61214D46DCA7950A900AA91E).
 
 ## Relayer hardening
 

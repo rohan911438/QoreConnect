@@ -15,7 +15,7 @@ import {
   type QoreNetwork,
   type RelayRequest,
   type RelayResponse,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 import type { PlannedCall } from './tools'
 
 export type ExecOutcome =

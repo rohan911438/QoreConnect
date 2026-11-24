@@ -26,8 +26,8 @@ import {
   type Eip1193Provider,
   type RelayRequest,
   type RelayResponse,
-} from '@qoreconnect/core'
-import { CHAIN_CODES, ChainFundsSender, ChainRelay, DEFAULT_SPONSOR, RelayService, RelayerStore, SponsorService, createRelayerApp, operatorAccount } from '@qoreconnect/relayer'
+} from '@rohankumar4179/core'
+import { CHAIN_CODES, ChainFundsSender, ChainRelay, DEFAULT_SPONSOR, RelayService, RelayerStore, SponsorService, createRelayerApp, operatorAccount } from '@rohankumar4179/relayer'
 import { privateKeyToAccount } from 'viem/accounts'
 import { Agent } from '../../src/agent'
 import { CompromisedPlanner, RulePlanner } from '../../src/planner'

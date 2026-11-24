@@ -29,7 +29,7 @@ import {
   onboardRoot,
   signRelayRequest,
   type Eip1193Provider,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 import {
   CHAIN_CODES,
   ChainFundsSender,
@@ -40,7 +40,7 @@ import {
   SponsorService,
   createRelayerApp,
   operatorAccount,
-} from '@qoreconnect/relayer'
+} from '@rohankumar4179/relayer'
 
 const here = import.meta.dirname
 dotenv({ path: resolve(here, '../../../.env'), quiet: true } as any)

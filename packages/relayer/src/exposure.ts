@@ -22,7 +22,7 @@ import {
   type PqcKeyInfo,
   type PqcParams,
   type SpendingRuleInfo,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 import { normaliseAccount } from './doctor'
 
 export interface ExposureChain {

@@ -2,7 +2,7 @@
 import { config } from 'dotenv'
 import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
-import { RelayerStore } from '@qoreconnect/relayer'
+import { RelayerStore } from '@rohankumar4179/relayer'
 
 config({ path: resolve(import.meta.dirname, '../../../.env'), quiet: true } as any)
 const dbPath = resolve(process.env.RELAYER_DB ?? './data/relayer.db')

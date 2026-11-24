@@ -1,6 +1,6 @@
 'use client'
-import { DIANA, QoreConnectProvider, RootVault, type QoreNetwork } from '@qoreconnect/core'
-import { createQoreConnectUI, type QoreConnectUI } from '@qoreconnect/react'
+import { DIANA, QoreConnectProvider, RootVault, type QoreNetwork } from '@rohankumar4179/core'
+import { createQoreConnectUI, type QoreConnectUI } from '@rohankumar4179/react'
 
 export const RELAYER_URL = process.env.NEXT_PUBLIC_RELAYER_URL ?? 'http://localhost:8787'
 export const GAS_TANK = process.env.NEXT_PUBLIC_GAS_TANK ?? 'demo-dapp'

@@ -1,4 +1,4 @@
-# @qoreconnect/react
+# @rohankumar4179/react
 
 **The QoreConnect UI as React components.** Onboarding in about 20 seconds, a signing preview that never lets a user
 sign blind, a contract approval sheet, and an unlock prompt. One line of setup in your app, no CSS to import.
@@ -6,7 +6,7 @@ sign blind, a contract approval sheet, and an unlock prompt. One line of setup i
 > **Testnet only** (QoreChain Diana, EVM chain id 9800). Not audited; use small amounts.
 
 ```bash
-npm install @qoreconnect/react @qoreconnect/wagmi
+npm install @rohankumar4179/react @rohankumar4179/wagmi
 # peer dependencies: react >= 18, react-dom >= 18
 ```
 
@@ -23,7 +23,7 @@ npm install @qoreconnect/react @qoreconnect/wagmi
 
 ## Why use it
 
-| | Typical wallet UX | **@qoreconnect/react** |
+| | Typical wallet UX | **@rohankumar4179/react** |
 |---|---|---|
 | What the user signs | A raw hex digest in MetaMask | A **decoded, simulated** call with limits checked first |
 | Calls that would fail | Signed, then fail on chain | **Blocked before signing**, with the reason |
@@ -37,8 +37,8 @@ npm install @qoreconnect/react @qoreconnect/wagmi
 ```ts
 // wagmi.ts
 import { createConfig } from 'wagmi'
-import { qoreConnect, qoreTransport, qorechainDiana } from '@qoreconnect/wagmi'
-import { createQoreConnectUI } from '@qoreconnect/react'
+import { qoreConnect, qoreTransport, qorechainDiana } from '@rohankumar4179/wagmi'
+import { createQoreConnectUI } from '@rohankumar4179/react'
 
 export const ui = createQoreConnectUI()
 
@@ -61,7 +61,7 @@ export const config = createConfig({
 // main.tsx
 import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { QoreConnectProvider } from '@qoreconnect/react'
+import { QoreConnectProvider } from '@rohankumar4179/react'
 import { config, ui } from './wagmi'
 
 const queryClient = new QueryClient()
@@ -105,19 +105,19 @@ Every screen is exported for custom flows: `OnboardingModal`, `SigningPreview`, 
 the base `Modal`. Styles are injected automatically; `QORECONNECT_STYLES` is exported if you want to restyle them.
 
 ```tsx
-import { SigningPreview } from '@qoreconnect/react'
+import { SigningPreview } from '@rohankumar4179/react'
 
 <SigningPreview preview={preview} appName="My dApp" signerAddress={metamaskAddress}
   onConfirm={send} onCancel={close} />
 ```
 
-`preview` comes from `buildPreview` in [`@qoreconnect/core`](https://www.npmjs.com/package/@qoreconnect/core).
+`preview` comes from `buildPreview` in [`@rohankumar4179/core`](https://www.npmjs.com/package/@rohankumar4179/core).
 
 ## Related packages
 
-- [`@qoreconnect/wagmi`](https://www.npmjs.com/package/@qoreconnect/wagmi): the wagmi connector these screens plug into
-- [`@qoreconnect/core`](https://www.npmjs.com/package/@qoreconnect/core): vault, session keys, preview, provider
-- [`@qoreconnect/relayer`](https://www.npmjs.com/package/@qoreconnect/relayer): the relayer your dApp points at
+- [`@rohankumar4179/wagmi`](https://www.npmjs.com/package/@rohankumar4179/wagmi): the wagmi connector these screens plug into
+- [`@rohankumar4179/core`](https://www.npmjs.com/package/@rohankumar4179/core): vault, session keys, preview, provider
+- [`@rohankumar4179/relayer`](https://www.npmjs.com/package/@rohankumar4179/relayer): the relayer your dApp points at
 
 Project: [QoreConnect](https://github.com/rohan911438/QoreConnect) · Live demo dApp: <https://qoreconnect-demo.vercel.app>
 

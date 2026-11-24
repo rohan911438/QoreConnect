@@ -100,7 +100,7 @@ export async function getTransaction(net: QoreNetwork, hash: string, rpc: RpcFn,
 
 /**
  * A request function for viem/wagmi transports: QoreChain EVM JSON-RPC plus relayed-call receipts.
- * Use it via `qoreTransport()` from `@qoreconnect/wagmi`.
+ * Use it via `qoreTransport()` from `@rohankumar4179/wagmi`.
  */
 export function qoreRequest(net: QoreNetwork, fetchImpl?: FetchLike) {
   const rpc = evmRpc(net, fetchImpl)

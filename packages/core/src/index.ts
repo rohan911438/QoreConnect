@@ -1,4 +1,4 @@
-export const PACKAGE = '@qoreconnect/core'
+export const PACKAGE = '@rohankumar4179/core'
 export * from './config'
 export * from './errors'
 export * from './chain/http'

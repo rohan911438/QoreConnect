@@ -13,7 +13,7 @@ import {
   onboardRoot,
   revokeKeys,
   signLinkProof,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 import { MNEMONIC, RELAYER_URL, inProcessRelayer, standInMetaMask } from './helpers'
 
 const COUNTER = '0xfa1643e3fbd2f58d8dbaf4ec025c2541062ffc74'

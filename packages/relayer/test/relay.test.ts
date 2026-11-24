@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { encodeFunctionData, parseAbi } from 'viem'
-import { DIANA, toRelayRequest, type AuthenticatorInfo, type SpendingRuleInfo, type TxResult } from '@qoreconnect/core'
+import { DIANA, toRelayRequest, type AuthenticatorInfo, type SpendingRuleInfo, type TxResult } from '@rohankumar4179/core'
 import { buildMetaMaskExecuteEvm } from '@qorechain/sdk'
 import { RelayService, RelayerStore, createRelayerApp, SponsorService, type RelayChain } from '../src/index'
 
@@ -206,7 +206,7 @@ describe('RelayService pipeline', () => {
 
   it('code review: a broadcast that times out is still charged the estimated fee', async () => {
     const { pk, store, svc, chain } = setup()
-    const { QoreConnectError } = await import('@qoreconnect/core')
+    const { QoreConnectError } = await import('@rohankumar4179/core')
     chain.submit = async () => {
       throw new QoreConnectError('TX_FAILED', { message: 'Transaction was not included in time', txHash: 'CD'.repeat(32) })
     }

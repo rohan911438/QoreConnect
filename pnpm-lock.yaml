@@ -46,10 +46,10 @@ importers:
 
   apps/demo-dapp:
     dependencies:
-      '@qoreconnect/react':
+      '@rohankumar4179/react':
         specifier: workspace:*
         version: link:../../packages/react
-      '@qoreconnect/wagmi':
+      '@rohankumar4179/wagmi':
         specifier: workspace:*
         version: link:../../packages/wagmi
       '@tanstack/react-query':
@@ -71,10 +71,10 @@ importers:
       '@qorechain/sdk':
         specifier: 0.14.0
         version: 0.14.0(bufferutil@4.2.0)(utf-8-validate@5.0.10)(viem@2.58.2(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
-      '@qoreconnect/core':
+      '@rohankumar4179/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@qoreconnect/relayer':
+      '@rohankumar4179/relayer':
         specifier: workspace:*
         version: link:../../packages/relayer
       '@testing-library/react':
@@ -116,10 +116,10 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.11
         version: 2.1.11(hono@4.13.19)
-      '@qoreconnect/core':
+      '@rohankumar4179/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@qoreconnect/relayer':
+      '@rohankumar4179/relayer':
         specifier: workspace:*
         version: link:../../packages/relayer
       dotenv:
@@ -138,10 +138,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@qoreconnect/core':
+      '@rohankumar4179/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@qoreconnect/react':
+      '@rohankumar4179/react':
         specifier: workspace:*
         version: link:../../packages/react
       next:
@@ -181,7 +181,7 @@ importers:
       '@anthropic-ai/sdk':
         specifier: 1.6.0
         version: 1.6.0(zod@4.6.7)
-      '@qoreconnect/core':
+      '@rohankumar4179/core':
         specifier: workspace:*
         version: link:../../packages/core
       dotenv:
@@ -194,7 +194,7 @@ importers:
       '@qorechain/sdk':
         specifier: 0.14.0
         version: 0.14.0(bufferutil@4.2.0)(utf-8-validate@5.0.10)(viem@2.58.2(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.6.7))
-      '@qoreconnect/relayer':
+      '@rohankumar4179/relayer':
         specifier: workspace:*
         version: link:../../packages/relayer
       '@types/node':
@@ -240,7 +240,7 @@ importers:
 
   packages/react:
     dependencies:
-      '@qoreconnect/core':
+      '@rohankumar4179/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -271,7 +271,7 @@ importers:
       '@qorechain/sdk':
         specifier: 0.14.0
         version: 0.14.0(bufferutil@4.2.0)(utf-8-validate@5.0.10)(viem@2.58.2(bufferutil@4.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.6.7))
-      '@qoreconnect/core':
+      '@rohankumar4179/core':
         specifier: workspace:*
         version: link:../core
       hono:
@@ -290,7 +290,7 @@ importers:
 
   packages/wagmi:
     dependencies:
-      '@qoreconnect/core':
+      '@rohankumar4179/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:

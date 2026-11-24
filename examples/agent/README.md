@@ -60,7 +60,7 @@ Environment (`examples/agent/.env`): `AGENT_PRIVATE_KEY`, `RELAYER_URL` (default
 ```bash
 pnpm --filter @qoreconnect/example-agent test               # offline: injection, guard, cost caps (scripted fake Claude client)
 pnpm --filter @qoreconnect/example-agent test:integration   # Diana: create → tip → chain refusal → injection refusal → revoke
-pnpm --filter @qoreconnect/core test                        # instruction verification (valid, tampered, wrong key, expired, …)
+pnpm --filter @rohankumar4179/core test                        # instruction verification (valid, tampered, wrong key, expired, …)
 ```
 
 Evidence from the Diana run is in `docs/testnet-evidence.md`.

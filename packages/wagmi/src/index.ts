@@ -11,10 +11,10 @@ import {
   announceProvider,
   type QoreConnectHooks,
   type QoreConnectProviderOptions,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 
-export const PACKAGE = '@qoreconnect/wagmi'
-export { QoreConnectProvider, QORECONNECT_ICON } from '@qoreconnect/core'
+export const PACKAGE = '@rohankumar4179/wagmi'
+export { QoreConnectProvider, QORECONNECT_ICON } from '@rohankumar4179/core'
 
 export interface QoreConnectParameters {
   /** Shown in onboarding and approval screens. */
@@ -25,7 +25,7 @@ export interface QoreConnectParameters {
   relayerUrl: string
   /** Gas tank that pays this dApp's fees. */
   gasTankId: string
-  /** UI hooks (onboarding, approvals, preview). `@qoreconnect/react` provides them. */
+  /** UI hooks (onboarding, approvals, preview). `@rohankumar4179/react` provides them. */
   ui?: QoreConnectHooks
   /** Announce QoreConnect to EIP-6963 wallet pickers such as RainbowKit (default true). */
   announce?: boolean

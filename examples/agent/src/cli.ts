@@ -13,7 +13,7 @@ import { resolve } from 'node:path'
 import { config as dotenv } from 'dotenv'
 import { generatePrivateKey } from 'viem/accounts'
 import type { Hex } from 'viem'
-import { DIANA, type SignedInstruction } from '@qoreconnect/core'
+import { DIANA, type SignedInstruction } from '@rohankumar4179/core'
 import { Agent } from './agent'
 import { ClaudePlanner, RulePlanner, type UntrustedDoc } from './planner'
 

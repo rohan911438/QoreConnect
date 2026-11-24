@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 let attempt = 0
-vi.mock('@qoreconnect/core', async (orig) => {
+vi.mock('@rohankumar4179/core', async (orig) => {
   const real = await orig<any>()
   return {
     ...real,
@@ -18,7 +18,7 @@ vi.mock('@qoreconnect/core', async (orig) => {
   }
 })
 
-const { DIANA, MemoryVaultStorage, RootVault, onboardAndLink } = await import('@qoreconnect/core')
+const { DIANA, MemoryVaultStorage, RootVault, onboardAndLink } = await import('@rohankumar4179/core')
 const { ApproveSheet, OnboardingModal } = await import('../src/index')
 
 afterEach(cleanup)

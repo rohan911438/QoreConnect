@@ -21,7 +21,7 @@ import {
   type RelayResponse,
   type SpendingRuleInfo,
   type TxResult,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 import type { RelayerStore } from './store'
 import { AccountQueue } from './chain'
 

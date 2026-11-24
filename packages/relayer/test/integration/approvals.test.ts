@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest'
 import { qorToEvm } from '@qorechain/sdk'
 import { encodeFunctionData, parseAbi } from 'viem'
-import { DIANA, linkSessionKey, prepareTokenRevoke, setLimits, signRelayRequest } from '@qoreconnect/core'
+import { DIANA, linkSessionKey, prepareTokenRevoke, setLimits, signRelayRequest } from '@rohankumar4179/core'
 import {
   ApprovalScanner,
   ChainRelay,

@@ -4,15 +4,15 @@ Three packages for developers, one internal core.
 
 | Package | Audience | Contents |
 |---|---|---|
-| `@qoreconnect/core` | Internal and advanced users | Root vault, chain client, EIP-1193 provider, preview builder, Doctor client |
-| `@qoreconnect/wagmi` | dApp developers (main entry point) | wagmi connector, EIP-6963 announcement |
-| `@qoreconnect/react` | dApp developers using React | Onboarding modal, signing preview, approve-dApp sheet, honesty badges, `QoreConnectProvider` |
-| `@qoreconnect/relayer` | Teams self-hosting | Relayer server as a library + CLI |
+| `@rohankumar4179/core` | Internal and advanced users | Root vault, chain client, EIP-1193 provider, preview builder, Doctor client |
+| `@rohankumar4179/wagmi` | dApp developers (main entry point) | wagmi connector, EIP-6963 announcement |
+| `@rohankumar4179/react` | dApp developers using React | Onboarding modal, signing preview, approve-dApp sheet, honesty badges, `QoreConnectProvider` |
+| `@rohankumar4179/relayer` | Teams self-hosting | Relayer server as a library + CLI |
 
 ## The 5-line integration (target developer experience)
 
 ```ts
-import { qoreConnect } from '@qoreconnect/wagmi'
+import { qoreConnect } from '@rohankumar4179/wagmi'
 import { qorechainTestnet } from '@qorechain/evm'
 
 export const config = createConfig({

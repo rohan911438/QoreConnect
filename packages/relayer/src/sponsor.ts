@@ -1,6 +1,6 @@
 import { verifyMessage, isAddress, getAddress } from 'viem'
 import { verifyAuthenticatorLinkProof } from '@qorechain/sdk'
-import { sponsorMessage, type QoreNetwork } from '@qoreconnect/core'
+import { sponsorMessage, type QoreNetwork } from '@rohankumar4179/core'
 import type { RelayerStore } from './store'
 
 export interface SponsorConfig {

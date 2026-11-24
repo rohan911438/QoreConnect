@@ -412,9 +412,9 @@ export default async function Home() {
             <pre className="overflow-x-auto p-5 font-mono text-[12.5px] leading-[1.7]">
               <code>
                 <K c="import" /> {'{ qoreConnect, qoreTransport, qorechainDiana }'} <K c="from" />{' '}
-                <S c="'@qoreconnect/wagmi'" />
+                <S c="'@rohankumar4179/wagmi'" />
                 {'\n'}
-                <K c="import" /> {'{ createQoreConnectUI }'} <K c="from" /> <S c="'@qoreconnect/react'" />
+                <K c="import" /> {'{ createQoreConnectUI }'} <K c="from" /> <S c="'@rohankumar4179/react'" />
                 {'\n\n'}
                 <K c="const" /> ui = <F c="createQoreConnectUI" />
                 ()

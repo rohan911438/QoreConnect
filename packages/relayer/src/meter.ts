@@ -4,7 +4,7 @@
  */
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from 'viem'
 import { evmToQor } from '@qorechain/sdk'
-import { explorerTx, type AuthenticatorInfo, type PqcKeyInfo, type QoreNetwork } from '@qoreconnect/core'
+import { explorerTx, type AuthenticatorInfo, type PqcKeyInfo, type QoreNetwork } from '@rohankumar4179/core'
 import type { RelayerStore } from './store'
 
 /** Start of Q3 2027: QoreChain's roadmap target for hybrid signatures "Required" on the EVM lane. */

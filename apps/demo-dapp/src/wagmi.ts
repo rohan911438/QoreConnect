@@ -1,6 +1,6 @@
 import { createConfig } from 'wagmi'
-import { qoreConnect, qoreTransport, qorechainDiana } from '@qoreconnect/wagmi' // QoreConnect 1/9
-import { createQoreConnectUI } from '@qoreconnect/react' // QoreConnect 2/9
+import { qoreConnect, qoreTransport, qorechainDiana } from '@rohankumar4179/wagmi' // QoreConnect 1/9
+import { createQoreConnectUI } from '@rohankumar4179/react' // QoreConnect 2/9
 import { TIPJAR, tipJarAbi } from './contracts'
 
 export const ui = createQoreConnectUI() // QoreConnect 3/9: onboarding, approval and signing-preview modals

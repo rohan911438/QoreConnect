@@ -14,7 +14,7 @@ RUN pnpm install --frozen-lockfile --filter "@qoreconnect/relayer-app..."
 COPY packages/core packages/core
 COPY packages/relayer packages/relayer
 COPY apps/relayer apps/relayer
-RUN pnpm --filter @qoreconnect/core --filter @qoreconnect/relayer run build \
+RUN pnpm --filter @rohankumar4179/core --filter @rohankumar4179/relayer run build \
  && pnpm --filter @qoreconnect/relayer-app deploy --prod --legacy /out
 
 FROM node:24-slim

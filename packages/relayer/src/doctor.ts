@@ -3,7 +3,7 @@
  * the first failure is the answer, with a one-click fix. Read-only; never signs anything.
  */
 import { evmToQor, qorToEvm } from '@qorechain/sdk'
-import { ruleBoundsEveryDenom, type AuthenticatorInfo, type PqcKeyInfo, type SpendingRuleInfo } from '@qoreconnect/core'
+import { ruleBoundsEveryDenom, type AuthenticatorInfo, type PqcKeyInfo, type SpendingRuleInfo } from '@rohankumar4179/core'
 import type { Tank } from './store'
 
 export type DoctorCheckId = 'pqc-key' | 'evm-window' | 'linked-key' | 'rule' | 'target' | 'tank'

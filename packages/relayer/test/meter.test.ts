@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DIANA, type AuthenticatorInfo } from '@qoreconnect/core'
+import { DIANA, type AuthenticatorInfo } from '@rohankumar4179/core'
 import { MeterIndexer, Q3_2027, RelayerStore, RpcEvmSampler, SponsorService, computeMeter, createRelayerApp, type MeterChain } from '../src/index'
 
 const A = 'qor10z0spuhkwp0dzr0sx4rhl3ed83z8pe8yk9848s'

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { isProxyPathAllowed } from '@qoreconnect/core'
+import { isProxyPathAllowed } from '@rohankumar4179/core'
 
 /**
  * Same-origin proxy to QoreChain REST (public REST has no CORS).

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { RootVault, WebAuthnPasskeyProvider, QoreConnectError, type Protection } from '@qoreconnect/core'
+import { RootVault, WebAuthnPasskeyProvider, QoreConnectError, type Protection } from '@rohankumar4179/core'
 
 /** Manual test page for P03 (G4/G5). Not linked from the product UI. */
 export default function DevVault() {

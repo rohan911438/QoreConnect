@@ -1,4 +1,4 @@
-export const PACKAGE = '@qoreconnect/relayer'
+export const PACKAGE = '@rohankumar4179/relayer'
 export * from './store'
 export * from './sponsor'
 export * from './chain'

@@ -26,7 +26,7 @@ import {
   onboardRoot,
   setLimits,
   signRelayRequest,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 import { ChainRelay, RelayService, RelayerStore, operatorAccount } from '../../src/index'
 import { MNEMONIC, RELAYER_URL, inProcessRelayer, standInMetaMask } from './helpers'
 

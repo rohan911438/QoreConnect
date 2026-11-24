@@ -1,6 +1,6 @@
 /** P13: input size limits, timeouts, rate limits and low-balance alerts, verified by tests. */
 import { describe, expect, it, vi } from 'vitest'
-import { DIANA, HTTP_TIMEOUT_MS, QoreClient, httpConfig } from '@qoreconnect/core'
+import { DIANA, HTTP_TIMEOUT_MS, QoreClient, httpConfig } from '@rohankumar4179/core'
 import { MAX_BODY_BYTES, RelayerStore, SponsorService, createRelayerApp } from '../src/index'
 
 const app = (over: Partial<Parameters<typeof createRelayerApp>[0]> = {}) =>

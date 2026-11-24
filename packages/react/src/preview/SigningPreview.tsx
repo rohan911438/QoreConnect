@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type KeyboardEvent } from 'react'
-import type { HonestyLabel, Preview } from '@qoreconnect/core'
+import type { HonestyLabel, Preview } from '@rohankumar4179/core'
 import { STYLES } from '../styles'
 
 export interface SigningPreviewProps {

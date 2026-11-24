@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { authenticatorLinkMessageBytes } from '@qorechain/sdk'
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts'
-import { DIANA, sponsorMessage } from '@qoreconnect/core'
+import { DIANA, sponsorMessage } from '@rohankumar4179/core'
 import { RelayerStore, SponsorService, createRelayerApp, type FundsSender } from '../src/index'
 
 const ROOT_A = 'qor10z0spuhkwp0dzr0sx4rhl3ed83z8pe8yk9848s'

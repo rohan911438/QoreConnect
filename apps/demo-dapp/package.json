@@ -12,8 +12,8 @@
     "gate:p12": "tsx scripts/p12-gate.ts"
   },
   "dependencies": {
-    "@qoreconnect/react": "workspace:*",
-    "@qoreconnect/wagmi": "workspace:*",
+    "@rohankumar4179/react": "workspace:*",
+    "@rohankumar4179/wagmi": "workspace:*",
     "@tanstack/react-query": "5.108.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
@@ -21,8 +21,8 @@
     "wagmi": "2.19.5"
   },
   "devDependencies": {
-    "@qoreconnect/core": "workspace:*",
-    "@qoreconnect/relayer": "workspace:*",
+    "@rohankumar4179/core": "workspace:*",
+    "@rohankumar4179/relayer": "workspace:*",
     "@qorechain/sdk": "0.14.0",
     "tsx": "^4.20.0",
     "@testing-library/react": "^16.3.3",

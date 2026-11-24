@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.11",
-    "@qoreconnect/relayer": "workspace:*",
+    "@rohankumar4179/relayer": "workspace:*",
     "dotenv": "^17.0.0",
     "hono": "^4.13.19",
-    "@qoreconnect/core": "workspace:*",
+    "@rohankumar4179/core": "workspace:*",
     "tsx": "^4.20.0"
   },
   "devDependencies": {

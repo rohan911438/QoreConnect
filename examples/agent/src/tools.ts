@@ -3,7 +3,7 @@
  * name a contract or function the owner did not sign for.
  */
 import { encodeFunctionData, parseAbiItem, parseEther, type AbiFunction, type Hex } from 'viem'
-import type { AgentCall, AgentInstruction } from '@qoreconnect/core'
+import type { AgentCall, AgentInstruction } from '@rohankumar4179/core'
 
 export interface ToolSpec {
   name: string

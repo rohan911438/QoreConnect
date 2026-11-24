@@ -10,7 +10,7 @@ import {
   type QoreNetwork,
   type SignedInstruction,
   type VerifyResult,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 import { execute, type ExecutorOptions } from './executor'
 import { DEFAULT_BUDGET, type Budget, type PlanRun, type Planner, type UntrustedDoc } from './planner'
 

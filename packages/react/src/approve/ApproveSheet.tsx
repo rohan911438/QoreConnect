@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { explorerAddress, formatQor, type Limits, type QoreNetwork } from '@qoreconnect/core'
+import { explorerAddress, formatQor, type Limits, type QoreNetwork } from '@rohankumar4179/core'
 import { Modal } from '../Modal'
 
 export interface ApproveSheetProps {

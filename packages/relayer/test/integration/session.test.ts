@@ -1,6 +1,6 @@
 /** P05 G2–G6: session-key lifecycle on Diana, invariant checker after every step. */
 import { describe, expect, it } from 'vitest'
-import { DIANA, approveDapp, getSessionState, linkSessionKey, revokeKeys, setLimits, assertRuleInvariants, type SessionState } from '@qoreconnect/core'
+import { DIANA, approveDapp, getSessionState, linkSessionKey, revokeKeys, setLimits, assertRuleInvariants, type SessionState } from '@rohankumar4179/core'
 import { MNEMONIC, freshRoot, standInMetaMask } from './helpers'
 
 const A = '0xfa1643e3fbd2f58d8dbaf4ec025c2541062ffc74' // SpikeCounter (allowed), deployed in P01

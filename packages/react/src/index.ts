@@ -1,4 +1,4 @@
-export const PACKAGE = '@qoreconnect/react'
+export const PACKAGE = '@rohankumar4179/react'
 export { Modal, type ModalProps } from './Modal'
 export { SigningPreview, type SigningPreviewProps } from './preview/SigningPreview'
 export { OnboardingModal, type OnboardingModalProps } from './onboarding/OnboardingModal'

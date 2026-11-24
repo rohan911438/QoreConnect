@@ -1,8 +1,8 @@
 /** Top up the relayer account from the sponsor account when it is below a threshold. Usage: tsx scripts/fund-relayer.ts [targetQOR] */
 import { config } from 'dotenv'
 import { resolve } from 'node:path'
-import { DIANA, QoreClient, formatQor, parseQor } from '@qoreconnect/core'
-import { ChainFundsSender, ensurePqcRegistered, operatorAccount } from '@qoreconnect/relayer'
+import { DIANA, QoreClient, formatQor, parseQor } from '@rohankumar4179/core'
+import { ChainFundsSender, ensurePqcRegistered, operatorAccount } from '@rohankumar4179/relayer'
 
 config({ path: resolve(import.meta.dirname, '../../../.env'), quiet: true } as any)
 const sponsor = await operatorAccount(process.env.SPONSOR_MNEMONIC!, Number(process.env.SPONSOR_INDEX ?? 0))

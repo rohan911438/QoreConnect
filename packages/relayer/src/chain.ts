@@ -5,7 +5,7 @@ import {
   signProofOfPossession,
   type UnifiedAccount,
 } from '@qorechain/sdk'
-import { QoreClient, RestBroadcaster, sendTx, type QoreNetwork } from '@qoreconnect/core'
+import { QoreClient, RestBroadcaster, sendTx, type QoreNetwork } from '@rohankumar4179/core'
 import type { FundsSender } from './sponsor'
 
 /** Serialises transactions from one account so sequence numbers never race. */

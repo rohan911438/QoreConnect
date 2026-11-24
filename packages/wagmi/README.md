@@ -1,4 +1,4 @@
-# @qoreconnect/wagmi
+# @rohankumar4179/wagmi
 
 **Quantum-safe root. MetaMask convenience.** A wagmi connector that lets any MetaMask user use your dApp on QoreChain,
 with a post-quantum (ML-DSA-87) root account in control. MetaMask signs as a capped, scoped, revocable session key; a
@@ -8,7 +8,7 @@ relayer pays gas. **9 lines** to integrate; your existing wagmi code does not ch
 > quantum-safe: QoreConnect limits what it can do and lets the root revoke it in one transaction. Not audited.
 
 ```bash
-npm install @qoreconnect/wagmi @qoreconnect/react wagmi@2 viem @tanstack/react-query
+npm install @rohankumar4179/wagmi @rohankumar4179/react wagmi@2 viem @tanstack/react-query
 ```
 
 Requires wagmi **v2** (`@wagmi/core` ^2.22). wagmi v3 is not tested yet.
@@ -34,8 +34,8 @@ so without QoreConnect **a MetaMask user cannot send a single transaction to you
 
 ```ts
 import { createConfig } from 'wagmi'
-import { qoreConnect, qoreTransport, qorechainDiana } from '@qoreconnect/wagmi'
-import { createQoreConnectUI } from '@qoreconnect/react'
+import { qoreConnect, qoreTransport, qorechainDiana } from '@rohankumar4179/wagmi'
+import { createQoreConnectUI } from '@rohankumar4179/react'
 
 export const ui = createQoreConnectUI()            // onboarding, approval and signing-preview screens
 
@@ -45,7 +45,7 @@ export const config = createConfig({
     qoreConnect({
       appName: 'My dApp',
       contracts: ['0xYourContract'],                // what users approve for your dApp
-      relayerUrl: 'https://your-relayer',            // a @qoreconnect/relayer server
+      relayerUrl: 'https://your-relayer',            // a @rohankumar4179/relayer server
       gasTankId: 'my-dapp',                          // the gas tank that pays your users' fees
       ui: ui.hooks,
     }),
@@ -54,7 +54,7 @@ export const config = createConfig({
 })
 ```
 
-Then render `<QoreConnectProvider ui={ui}>` from `@qoreconnect/react` once, inside `WagmiProvider`.
+Then render `<QoreConnectProvider ui={ui}>` from `@rohankumar4179/react` once, inside `WagmiProvider`.
 
 Your components stay plain wagmi:
 
@@ -91,7 +91,7 @@ On chain, `msg.sender` is the user's **quantum-safe root account**, not the Meta
 | `contracts` | `string[]` | Contracts users approve for this dApp: `"0xTarget"`, or `"0xTarget/0xSelector"` to allow one function only. |
 | `relayerUrl` | `string` | Your QoreConnect relayer. |
 | `gasTankId` | `string` | Gas tank that pays your users' fees. |
-| `ui` | `QoreConnectHooks` | UI hooks; `createQoreConnectUI().hooks` from `@qoreconnect/react`, or your own. |
+| `ui` | `QoreConnectHooks` | UI hooks; `createQoreConnectUI().hooks` from `@rohankumar4179/react`, or your own. |
 | `announce` | `boolean` | Announce QoreConnect over EIP-6963 so pickers like RainbowKit list it (default `true`). |
 | `advanced` | object | `abis` (readable previews by contract address), `net`, `metamask`, `vault`, `fetch`, `fourByte`. |
 
@@ -126,9 +126,9 @@ The QoreChain Diana testnet as a viem `Chain` (id 9800, RPC, WebSocket, explorer
 
 ## Related packages
 
-- [`@qoreconnect/react`](https://www.npmjs.com/package/@qoreconnect/react): the screens
-- [`@qoreconnect/core`](https://www.npmjs.com/package/@qoreconnect/core): vault, session keys, preview, provider
-- [`@qoreconnect/relayer`](https://www.npmjs.com/package/@qoreconnect/relayer): run your own relayer and gas tank
+- [`@rohankumar4179/react`](https://www.npmjs.com/package/@rohankumar4179/react): the screens
+- [`@rohankumar4179/core`](https://www.npmjs.com/package/@rohankumar4179/core): vault, session keys, preview, provider
+- [`@rohankumar4179/relayer`](https://www.npmjs.com/package/@rohankumar4179/relayer): run your own relayer and gas tank
 
 Project: [QoreConnect](https://github.com/rohan911438/QoreConnect)
 

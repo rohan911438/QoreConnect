@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AuthenticatorInfo, SpendingRuleInfo } from '@qoreconnect/core'
+import type { AuthenticatorInfo, SpendingRuleInfo } from '@rohankumar4179/core'
 import { gradeOf, runExposure, type ExposureChain } from '../src/exposure'
 
 const ADDR = 'qor1wpae9a38v7vlj2xvun2cw0669w4ls568zar4w8'

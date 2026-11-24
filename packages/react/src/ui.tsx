@@ -9,7 +9,7 @@ import {
   type QoreConnectHooks,
   type QoreNetwork,
   type RootSigner,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 import { SigningPreview } from './preview/SigningPreview'
 import { OnboardingModal } from './onboarding/OnboardingModal'
 import { ApproveSheet } from './approve/ApproveSheet'

@@ -4,7 +4,7 @@ import { BASE_CSP, SECURITY_HEADERS } from './lib/csp'
 const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  transpilePackages: ['@qoreconnect/core', '@qoreconnect/react'],
+  transpilePackages: ['@rohankumar4179/core', '@rohankumar4179/react'],
   async headers() {
     // Every page: base CSP and hardening headers. Vault pages additionally get a nonce CSP from proxy.ts;
     // browsers enforce both policies, so the stricter one wins there.

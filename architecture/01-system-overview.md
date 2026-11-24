@@ -7,13 +7,13 @@ flowchart LR
   subgraph Browser["User's browser"]
     MM["MetaMask<br/>(classical session key)"]
     DAPP["Any EVM dApp<br/>(wagmi / viem)"]
-    CONN["@qoreconnect/wagmi<br/>connector + EIP-1193 provider"]
-    VAULT["Root key vault<br/>(@qoreconnect/core)<br/>ML-DSA-87 + secp256k1,<br/>passkey-encrypted"]
+    CONN["@rohankumar4179/wagmi<br/>connector + EIP-1193 provider"]
+    VAULT["Root key vault<br/>(@rohankumar4179/core)<br/>ML-DSA-87 + secp256k1,<br/>passkey-encrypted"]
     UI["QoreConnect UI<br/>(onboarding, preview,<br/>dashboard)"]
   end
 
   subgraph Server["QoreConnect services"]
-    REL["Relayer<br/>(@qoreconnect/relayer)<br/>hybrid-signed envelope,<br/>pays fees"]
+    REL["Relayer<br/>(@rohankumar4179/relayer)<br/>hybrid-signed envelope,<br/>pays fees"]
     SPON["Sponsor<br/>(pays root-key<br/>registration fee)"]
     TANK["Gas tanks<br/>(per-dApp budgets)"]
     METER["Migration Meter<br/>indexer"]
@@ -56,7 +56,7 @@ flowchart LR
 | **Sponsor** | inside `apps/relayer` | Pays fees for a new account's first transactions (ML-DSA key registration, first link). The user's browser signs them; the sponsor only funds the fee *(mechanism verified in P01)* |
 | **Gas tanks** | inside `apps/relayer` | Per-dApp budget, per-user daily cap, rate limits, kill switch per tank |
 | **Web app** | `apps/web` | Hosted onboarding, dashboard (approved dApps, limits, revoke, Q-Day kill switch, agent keys), Doctor, Migration Meter |
-| **Demo dApp** | `apps/demo-dapp` | A small wagmi app integrating `@qoreconnect/wagmi`, used in the video |
+| **Demo dApp** | `apps/demo-dapp` | A small wagmi app integrating `@rohankumar4179/wagmi`, used in the video |
 | **Contracts** | `contracts/` | Demo target contract, a malicious "drainer" for the attack demo, Foundry tests |
 | **Agent example** | `examples/agent` | AI agent holding a capped key; verifies root-signed instructions; acts through the relayer |
 

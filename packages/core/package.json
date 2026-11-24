@@ -1,5 +1,5 @@
 {
-  "name": "@qoreconnect/core",
+  "name": "@rohankumar4179/core",
   "version": "0.1.0",
   "description": "QoreConnect core: post-quantum root vault, QoreChain account management, EIP-1193 provider.",
   "license": "Apache-2.0",

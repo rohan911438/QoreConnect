@@ -40,7 +40,7 @@ QORE/
 ├── apps/
 │   ├── web/                      # Next.js: onboarding, dashboard, doctor, meter
 │   ├── relayer/                  # Hono server + Dockerfile, uses packages/relayer
-│   └── demo-dapp/                # Vite + wagmi app integrating @qoreconnect/wagmi
+│   └── demo-dapp/                # Vite + wagmi app integrating @rohankumar4179/wagmi
 ├── contracts/                    # Foundry: DemoTarget, Drainer (attack demo), tests
 ├── examples/
 │   └── agent/                    # AI agent with capped key and root-signed instructions

@@ -1,4 +1,4 @@
-# @qoreconnect/relayer
+# @rohankumar4179/relayer
 
 **The self-hostable QoreConnect backend.** It submits MetaMask-signed `MsgExecuteEVM` transactions on QoreChain, pays
 gas from dApp-funded gas tanks, sponsors new users' registration fee, and serves the Migration Meter, the account
@@ -7,7 +7,7 @@ Doctor, the Q-Day exposure report and the approval scanner. A [Hono](https://hon
 > **Testnet only** (QoreChain Diana). Use separate, testnet-only operator accounts; never a mainnet phrase. Not audited.
 
 ```bash
-npm install @qoreconnect/relayer @qoreconnect/core @hono/node-server
+npm install @rohankumar4179/relayer @rohankumar4179/core @hono/node-server
 ```
 
 Requires **Node 22.5+** (it uses the built-in `node:sqlite`, so there is no native module to build).
@@ -30,7 +30,7 @@ Requires **Node 22.5+** (it uses the built-in `node:sqlite`, so there is no nati
 
 ## Why run it
 
-| | No relayer | Generic relayer / paymaster | **@qoreconnect/relayer** |
+| | No relayer | Generic relayer / paymaster | **@rohankumar4179/relayer** |
 |---|---|---|---|
 | MetaMask users on QoreChain | Cannot transact (no ML-DSA key) | Not built for QoreChain's hybrid envelope | **Relays MetaMask-signed `MsgExecuteEVM`** |
 | Pays gas for users | No | Yes | **Yes**, from per-dApp tanks with per-user caps |
@@ -49,11 +49,11 @@ Or build your own from this package:
 
 ```ts
 import { serve } from '@hono/node-server'
-import { DIANA, QoreClient } from '@qoreconnect/core'
+import { DIANA, QoreClient } from '@rohankumar4179/core'
 import {
   RelayerStore, SponsorService, RelayService, ChainRelay, ChainFundsSender,
   DEFAULT_SPONSOR, operatorAccount, ensurePqcRegistered, createRelayerApp,
-} from '@qoreconnect/relayer'
+} from '@rohankumar4179/relayer'
 
 const net = DIANA
 const sponsorAccount = await operatorAccount(process.env.SPONSOR_MNEMONIC!, 0)
@@ -98,7 +98,7 @@ or over HTTP with `POST /v1/tanks` and `Authorization: Bearer <ADMIN_TOKEN>`. Th
 ### Optional services
 
 ```ts
-import { MeterIndexer, RpcEvmSampler, RelayedApprovalIndex, restPages } from '@qoreconnect/relayer'
+import { MeterIndexer, RpcEvmSampler, RelayedApprovalIndex, restPages } from '@rohankumar4179/relayer'
 
 const meter = new MeterIndexer({ net, store, chain: client, sampler: new RpcEvmSampler(net.evmRpc) },
   { intervalMs: 15 * 60_000 })
@@ -124,9 +124,9 @@ Full threat model: [`docs/security.md`](https://github.com/rohan911438/QoreConne
 
 ## Related packages
 
-- [`@qoreconnect/wagmi`](https://www.npmjs.com/package/@qoreconnect/wagmi): the connector dApps use to reach this relayer
-- [`@qoreconnect/core`](https://www.npmjs.com/package/@qoreconnect/core): `RelayerClient` and the shared types
-- [`@qoreconnect/react`](https://www.npmjs.com/package/@qoreconnect/react): the UI
+- [`@rohankumar4179/wagmi`](https://www.npmjs.com/package/@rohankumar4179/wagmi): the connector dApps use to reach this relayer
+- [`@rohankumar4179/core`](https://www.npmjs.com/package/@rohankumar4179/core): `RelayerClient` and the shared types
+- [`@rohankumar4179/react`](https://www.npmjs.com/package/@rohankumar4179/react): the UI
 
 Project: [QoreConnect](https://github.com/rohan911438/QoreConnect) · Live relayer: <https://qoreconnect-relayer.onrender.com/health>
 

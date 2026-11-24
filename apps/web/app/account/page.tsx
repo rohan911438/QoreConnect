@@ -23,8 +23,8 @@ import {
   type Protection,
   type RelayActivity,
   type SessionState,
-} from '@qoreconnect/core'
-import { UnlockPrompt } from '@qoreconnect/react'
+} from '@rohankumar4179/core'
+import { UnlockPrompt } from '@rohankumar4179/react'
 import { ConnectButton } from '../../components/ConnectButton'
 import { AgentsPanel } from '../../components/AgentsPanel'
 import { ApprovalsPanel } from '../../components/ApprovalsPanel'

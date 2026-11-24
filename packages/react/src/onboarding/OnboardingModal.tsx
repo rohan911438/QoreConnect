@@ -11,7 +11,7 @@ import {
   type QoreNetwork,
   type RootSigner,
   type RootVault,
-} from '@qoreconnect/core'
+} from '@rohankumar4179/core'
 import { Modal } from '../Modal'
 
 export interface OnboardingModalProps {

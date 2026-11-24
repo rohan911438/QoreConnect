@@ -7,8 +7,8 @@ import { config as dotenv } from 'dotenv'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
-import { DIANA, MemoryVaultStorage, QoreClient, RootVault, linkSessionKey, onboardRoot, type Eip1193Provider } from '@qoreconnect/core'
-import { ChainFundsSender, DEFAULT_SPONSOR, RelayerStore, RpcEvmSampler, SponsorService, computeMeter, createRelayerApp, operatorAccount, runDoctor } from '@qoreconnect/relayer'
+import { DIANA, MemoryVaultStorage, QoreClient, RootVault, linkSessionKey, onboardRoot, type Eip1193Provider } from '@rohankumar4179/core'
+import { ChainFundsSender, DEFAULT_SPONSOR, RelayerStore, RpcEvmSampler, SponsorService, computeMeter, createRelayerApp, operatorAccount, runDoctor } from '@rohankumar4179/relayer'
 
 const here = import.meta.dirname
 dotenv({ path: resolve(here, '../../../.env'), quiet: true } as any)

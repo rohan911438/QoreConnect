@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DIANA, type AuthenticatorInfo, type SpendingRuleInfo } from '@qoreconnect/core'
+import { DIANA, type AuthenticatorInfo, type SpendingRuleInfo } from '@rohankumar4179/core'
 import { RelayerStore, SponsorService, allowListCovers, createRelayerApp, normaliseAccount, runDoctor, type DoctorChain, type Tank } from '../src/index'
 
 const ACCOUNT = 'qor10z0spuhkwp0dzr0sx4rhl3ed83z8pe8yk9848s'

@@ -9,7 +9,7 @@
  * is lost. The scanner checks every entry against the live allowance, so failed or revoked approvals drop out.
  */
 import { qorToEvm } from '@qorechain/sdk'
-import { approvalInCalldata, type ApprovalKind } from '@qoreconnect/core'
+import { approvalInCalldata, type ApprovalKind } from '@rohankumar4179/core'
 
 export const EXECUTE_EVM_QUERY = "message.action='/qorechain.abstractaccount.v1.MsgExecuteEVM'"
 export const SEARCH_PAGE = 100

@@ -1,7 +1,7 @@
 import { config } from 'dotenv'
 import { resolve } from 'node:path'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
-import { DIANA, MemoryVaultStorage, QoreClient, RootVault, onboardRoot, type Eip1193Provider, type RootSigner } from '@qoreconnect/core'
+import { DIANA, MemoryVaultStorage, QoreClient, RootVault, onboardRoot, type Eip1193Provider, type RootSigner } from '@rohankumar4179/core'
 import { ChainFundsSender, DEFAULT_SPONSOR, RelayerStore, SponsorService, createRelayerApp, operatorAccount } from '../../src/index'
 
 config({ path: resolve(import.meta.dirname, '../../../../.env'), quiet: true } as any)
