@@ -41,7 +41,8 @@ const USER_MESSAGES: Record<QoreConnectErrorCode, string> = {
   SPONSOR_REFUSED: 'Sponsored onboarding is not available for this account. Fund it with a little QOR from the faucet instead.',
   TX_FAILED: 'The transaction failed on chain. Open it in the explorer for the reason.',
   INVALID_INPUT: 'Invalid input.',
-  METAMASK_MISSING: 'MetaMask was not found. Install MetaMask, then reload this page.',
+  METAMASK_MISSING:
+    'MetaMask was not found. Install MetaMask (or enable it), then reload this page. If another wallet such as QoreX opened instead, open MetaMask once so it can answer, then try again.',
   METAMASK_LOCKED: 'MetaMask is waiting for you. Open MetaMask, unlock it and answer the pending request.',
   WRONG_NETWORK: 'QoreConnect works on QoreChain Diana testnet (chain 9800) only. Switch the dApp to Diana.',
   UNKNOWN: 'Something went wrong. Reload the page and try again.',

@@ -72,29 +72,57 @@ export interface QoreConnectProviderOptions {
 
 type Listener = (...args: any[]) => void
 
-/** Discover MetaMask: EIP-6963 first (rdns io.metamask), then window.ethereum. */
-export async function discoverMetaMask(timeoutMs = 300): Promise<Eip1193Provider | undefined> {
+const METAMASK_RDNS = new Set(['io.metamask', 'io.metamask.flask'])
+
+/**
+ * Flags other wallets set on their injected provider. Several of them also set `isMetaMask: true` for compatibility,
+ * so `isMetaMask` alone does not prove the provider is MetaMask.
+ */
+const OTHER_WALLET_FLAGS = [
+  'isQoreX', 'isQorex', 'isQoreChain', 'isBraveWallet', 'isCoinbaseWallet', 'isRabby', 'isPhantom', 'isOkxWallet',
+  'isOKExWallet', 'isTrust', 'isTrustWallet', 'isTokenPocket', 'isBitKeep', 'isBitget', 'isExodus', 'isFrame',
+  'isZerion', 'isRainbow', 'isTally', 'isMathWallet', 'isSafePal', 'isXDEFI', 'isKeplr', 'isLeap', 'isMeteor',
+  'isQoreConnect',
+]
+const looksLikeMetaMask = (p: any) => !!p?.isMetaMask && !OTHER_WALLET_FLAGS.some((f) => p[f])
+
+/**
+ * Discover MetaMask, never another wallet. With several wallet extensions installed (QoreX, Brave, Phantom, …),
+ * `window.ethereum` may belong to any of them, and signing there would fail or, worse, use the wrong key.
+ *
+ * 1. EIP-6963: MetaMask announces itself with rdns `io.metamask`. Wait up to `timeoutMs` for it (extensions can be slow
+ *    to answer right after a page load), returning as soon as it arrives.
+ * 2. Legacy fallback, only when NO wallet speaks EIP-6963: an injected provider that is MetaMask and nothing else.
+ * Returns undefined rather than a different wallet; the caller reports METAMASK_MISSING.
+ */
+export async function discoverMetaMask(timeoutMs = 1500): Promise<Eip1193Provider | undefined> {
   const w = globalThis as any
   if (typeof w.addEventListener !== 'function') return undefined
+  let announced = 0
   const found = await new Promise<Eip1193Provider | undefined>((resolve) => {
     let done = false
+    const finish = (p: Eip1193Provider | undefined) => {
+      if (done) return
+      done = true
+      w.removeEventListener('eip6963:announceProvider', onAnnounce)
+      resolve(p)
+    }
     const onAnnounce = (e: any) => {
-      if (!done && e?.detail?.info?.rdns === 'io.metamask') {
-        done = true
-        resolve(e.detail.provider)
-      }
+      const rdns = e?.detail?.info?.rdns
+      if (rdns === 'xyz.qoreconnect' || e?.detail?.provider?.isQoreConnect) return // ourselves
+      announced++
+      if (METAMASK_RDNS.has(rdns) && e?.detail?.provider) finish(e.detail.provider)
     }
     w.addEventListener('eip6963:announceProvider', onAnnounce)
     w.dispatchEvent(new Event('eip6963:requestProvider'))
-    setTimeout(() => {
-      w.removeEventListener('eip6963:announceProvider', onAnnounce)
-      if (!done) resolve(undefined)
-    }, timeoutMs)
+    setTimeout(() => finish(undefined), timeoutMs)
   })
   if (found) return found
+  // Other wallets answered EIP-6963 but MetaMask did not: MetaMask is not installed (or disabled). Do not guess.
+  if (announced > 0) return undefined
   const eth = w.ethereum
-  if (eth?.providers?.length) return eth.providers.find((p: any) => p.isMetaMask) ?? eth.providers[0]
-  return eth
+  if (Array.isArray(eth?.providers) && eth.providers.length) return eth.providers.find(looksLikeMetaMask)
+  return looksLikeMetaMask(eth) ? eth : undefined
 }
 
 /**
