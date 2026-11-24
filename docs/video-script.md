@@ -1,25 +1,97 @@
 # Demo video script (≤ 3:00)
 
+Two tracks, recorded separately:
+
+- **Screen track:** what you click, in order. Recorded silently; speed up waits in the edit.
+- **Voiceover:** about the *product* (the problem, why it matters, what it guarantees). It does not describe the clicks;
+  the screen shows those.
+
 Record at 1920 × 1080, 30 fps, browser zoom 110 %, dark theme, a fresh browser profile with only MetaMask installed.
-Keep a visible timer on screen for the onboarding segment (`/?timer=1` shows one). Every number said aloud is on screen
-with its source. Never say "mainnet", "quantum-proof MetaMask" or "audited".
+Every number said aloud is visible on screen at that moment. Never say "mainnet", "quantum-proof MetaMask" or "audited".
 
-| Time | Screen | Narration (about 150 words per minute) |
-|---|---|---|
-| **0:00–0:15** | Demo dApp (Quantum Tip Jar) with plain MetaMask on chain 9800: the transaction is refused because the account has no ML-DSA key. | "QoreChain only accepts EVM transactions from accounts with a post-quantum key. MetaMask can't hold one. So today, a MetaMask user can't send a single transaction here." |
-| **0:15–0:25** | Landing page hero, the animated diagram. | "QoreConnect fixes that. A quantum-safe root key in your browser, and MetaMask as a capped, revocable session key." |
-| **0:25–1:05** | Timer starts. Connect with MetaMask → onboarding modal → passkey tap → one MetaMask signature → "You're on QoreChain". Timer stops (about 35 s). | "One passkey tap creates an ML-DSA-87 key on this device. One MetaMask signature links MetaMask with limits: approved dApps only, a per-transaction cap, a daily cap. Setup is sponsored, so I need no QOR. Done in about thirty-five seconds." |
-| **1:05–1:30** | Tip 0.1 QOR in the Tip Jar. The signing preview opens before MetaMask: decoded call, simulation, limits, the "Classical, capped" label. Confirm → success, explorer link. | "Before MetaMask opens, I see exactly what I'm signing, and whether the chain would allow it. Honesty built in: MetaMask's key is labelled classical. The dApp's gas tank pays the fee." |
-| **1:30–2:00** | Attack page, then terminal `pnpm demo:attack`. Explorer shows the refused transaction (code 10). | "Now an attacker steals the MetaMask key and calls a drainer contract through their own relayer, skipping every QoreConnect check. The chain itself refuses it: the drainer was never on my allow-list." |
-| **2:00–2:20** | Dashboard → Q-Day kill switch → passkey → "Only your quantum-safe root key can act now." | "And if Q-Day comes? One tap revokes every classical key in a single transaction. Only the quantum-safe root is left." |
-| **2:20–2:40** | Dashboard Agents panel: create an agent; the agent's terminal shows a root-signed instruction verified, a tip executed, and an injected instruction rejected (WRONG_OWNER / BAD_SIGNATURE). | "AI agents get the same rails: their own capped sub-account, and they act only on instructions my root key signed. Prompt injection can't spend my money." |
-| **2:40–2:52** | `apps/demo-dapp/src/wagmi.ts` with the QoreConnect lines highlighted. | "For dApp teams, it's one wagmi connector. Nine lines, and existing hooks keep working." |
-| **2:52–3:00** | Migration Meter: the counts and the countdown to Q3 2027. | "The Migration Meter counts every account with a post-quantum root, on chain. QoreConnect: the migration layer for the migration year." |
+---
 
-## Checklist before recording
+## Before recording
 
-- Relayer running and funded (`/health` healthy); demo gas tank seeded.
-- MetaMask on a fresh account with no QOR (shows that onboarding is sponsored).
-- Agent running locally (`pnpm --filter @qoreconnect/example-agent start`).
-- Explorer tabs pre-opened for the attack transaction.
-- Captions on; export 1080p; under 3:00.
+| | |
+|---|---|
+| Wake the relayer | Open <https://qoreconnect-relayer.onrender.com/health> 2 minutes before. The free plan can take about a minute to wake. |
+| MetaMask | A **new** account with **0 QOR** (this shows onboarding is sponsored), network QoreChain Diana (9800). |
+| Agent | Running locally: `pnpm --filter @qoreconnect/example-agent start`. Terminal window ready, large font. |
+| Tabs, in order | 1 demo dApp `qoreconnect-demo.vercel.app` · 2 web app `qoreconnect-web.vercel.app/?timer=1` · 3 explorer tab of the attack tx · 4 `/developers` · 5 `/meter` |
+| Terminal 2 | In the repo, ready to type `pnpm demo:attack`. |
+
+**Order matters:** do the kill switch **last** among the live actions. After it, MetaMask can no longer tip.
+
+---
+
+## Screen track (what moves on screen)
+
+| # | Time | Screen | Clicks and moments to capture |
+|---|---|---|---|
+| 1 | 0:00–0:15 | Demo dApp, plain MetaMask | Try a tip with MetaMask connected directly. Hold on the chain's refusal (no ML-DSA key). |
+| 2 | 0:15–0:30 | Web app landing | Slow scroll over the hero and the animated key diagram. |
+| 3 | 0:30–1:00 | Web app, `?timer=1` | **Connect** → onboarding modal → **passkey tap** → **one MetaMask signature** → stepper runs (sponsor, register, link) → "You're on QoreChain". The timer stops at about 20 s. Cut the waiting if needed but keep the timer visible. |
+| 4 | 1:00–1:25 | Demo dApp → Tip Jar | Amount **0.1**, click **Tip 0.1 QOR to …**. Hold 2 s on the **signing preview** (decoded call, simulation, limits, "Classical, capped"). Confirm in MetaMask → success → click the explorer link. |
+| 5 | 1:25–1:50 | Demo dApp → `#/attack` | Click **Claim airdrop (send 2 QOR)**: the preview says **Blocked by chain** and MetaMask never opens. Cut to terminal: `pnpm demo:attack` → refused, code 10. Cut to the explorer tab of the refused tx. |
+| 6 | 1:50–2:15 | Web app → Account → Agents | Create an agent (name, task, small limits) → **Create agent with passkey**. Cut to the agent terminal: instruction verified, tip executed, injected instruction **rejected**. |
+| 7 | 2:15–2:30 | Web app → Account → **Q-Day kill switch** | **Revoke every classical key** → passkey → "Revoked 1 classical key". Hold on "There are no active classical keys." |
+| 8 | 2:30–2:48 | `/developers` | Scroll slowly: install command → the four package cards → the quick-start code. Click **Copy** on the install line. |
+| 9 | 2:48–3:00 | `/meter` | Hold on the counts and the countdown to Q3 2027. Fade out on the logo. |
+
+---
+
+## Voiceover (product, not clicks)
+
+About 410 words, which is about 2:45 at a calm 150 words per minute. Each block matches the screen row with the same
+number. Pause between blocks; the screen carries the gaps.
+
+**1. The problem (0:00–0:15)**
+> QoreChain is preparing for Q-Day, the day quantum computers can break today's wallet keys. So it only accepts EVM
+> transactions from accounts that hold a post-quantum key. MetaMask can't hold one. That locks out the users QoreChain
+> wants most.
+
+**2. What QoreConnect is (0:15–0:30)**
+> QoreConnect is the migration layer. Your account is owned by a quantum-safe root key, ML-DSA-87, created and
+> encrypted on your own device. MetaMask stays, as a key the root can limit and revoke.
+
+**3. No new habits (0:30–1:00)**
+> You don't switch wallets, and you don't buy gas. A passkey and one MetaMask signature are all it takes, and setup is
+> sponsored, so a brand-new user starts with zero QOR. About twenty seconds.
+> The important part is what the root decides: which apps MetaMask may use, how much per transaction, and how much
+> per day. And it's the chain that enforces those rules, not our app.
+
+**4. Never sign blind (1:00–1:25)**
+> Wallets usually show you a hash and hope you trust it. QoreConnect decodes the call, simulates it and checks it
+> against your limits before MetaMask even opens. It's honest about safety too: this signature is labelled
+> classical and capped, because that is exactly what it is. The app pays the gas.
+
+**5. A stolen key is a small problem (1:25–1:50)**
+> Here's the real test. A drainer page, and an attacker holding the MetaMask key and bypassing our software entirely.
+> The chain still says no. A stolen classical key can spend at most your daily limit, only in apps you approved,
+> and only until you revoke it.
+
+**6. Agents with a budget, not your keys (1:50–2:15)**
+> The same rails work for AI agents. An agent gets its own capped sub-account and acts only on instructions your
+> quantum-safe root has signed. Inject a prompt, forge an instruction, and it's simply rejected. Prompt injection
+> can't spend your money.
+
+**7. Ready for Q-Day (2:15–2:30)**
+> And when Q-Day arrives, one tap revokes every classical key in a single transaction. What's left is the part that
+> was quantum-safe from the start.
+
+**8. For builders (2:30–2:48)**
+> For developers it's four open-source packages on npm today: a wagmi connector, the React screens, the core engine
+> and a relayer you can host yourself. Nine lines, and your existing code keeps working.
+
+**9. Close (2:48–3:00)**
+> The Migration Meter tracks how much of QoreChain already has a post-quantum root. QoreConnect: quantum-safe root,
+> MetaMask convenience. The migration layer for the migration year.
+
+---
+
+## Recording tips
+
+- Record the voiceover first, then cut the screen to fit it; it is easier than talking over fixed footage.
+- If onboarding runs long, speed up only the stepper, never the timer.
+- Captions on. Export 1080p, under 3:00.

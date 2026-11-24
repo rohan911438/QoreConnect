@@ -15,8 +15,9 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
   {
     title: 'Developers',
     links: [
-      { label: 'Quick start', href: `${REPO}#quick-start`, external: true },
-      { label: 'wagmi connector', href: `${REPO}/tree/main/packages/wagmi`, external: true },
+      { label: 'Packages and docs', href: '/developers' },
+      { label: 'Quick start', href: '/developers#quickstart' },
+      { label: 'npm', href: 'https://www.npmjs.com/package/@rohankumar4179/wagmi', external: true },
       { label: 'Run a relayer', href: `${REPO}/tree/main/apps/relayer`, external: true },
     ],
   },

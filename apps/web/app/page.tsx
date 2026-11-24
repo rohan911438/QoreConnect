@@ -18,9 +18,9 @@ const PROOF: { value: string; unit?: string; label: string; source: string }[] =
     source: `${REPO}/blob/main/apps/web/e2e/onboard-dashboard.spec.ts`,
   },
   {
-    value: '35',
+    value: '19.8',
     unit: 's',
-    label: 'fresh browser to a linked account, E2E on Diana',
+    label: 'fresh browser to a linked account, production E2E on Diana',
     source: `${REPO}/blob/main/prompts/STATUS.md`,
   },
   {
@@ -398,9 +398,14 @@ export default async function Home() {
                 </li>
               ))}
             </ul>
-            <a href={`${REPO}#integrate-a-dapp-wagmi`} className="qw-btn" rel="noreferrer noopener">
-              Read the quick start ↗
-            </a>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/developers" className="qw-btn qw-btn-primary">
+                Explore the packages →
+              </Link>
+              <Link href="/developers#quickstart" className="qw-btn">
+                Quick start
+              </Link>
+            </div>
           </div>
           <div className="qw-window qw-reveal">
             <div className="qw-window-bar">

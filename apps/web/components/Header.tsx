@@ -6,10 +6,11 @@ import { Logo } from './Logo'
 
 type Theme = 'system' | 'light' | 'dark'
 
-const NAV = [
+const NAV: { href: string; label: string; wide?: boolean }[] = [
   { href: '/exposure', label: 'Q-Day' },
   { href: '/meter', label: 'Meter' },
   { href: '/doctor', label: 'Doctor' },
+  { href: '/developers', label: 'Developers', wide: true }, // in the footer on small screens
   { href: '/account', label: 'Account' },
 ]
 
@@ -85,17 +86,11 @@ export function Header() {
               key={n.href}
               href={n.href}
               aria-current={path === n.href || path.startsWith(n.href + '/') ? 'page' : undefined}
-              className={`rounded-xl px-2 py-1.5 transition sm:px-3 ${path === n.href || path.startsWith(n.href + '/') ? 'bg-panel-2 font-medium text-fg' : 'text-muted hover:text-fg'}`}
+              className={`rounded-xl px-2 py-1.5 transition sm:px-3 ${n.wide ? 'hidden md:inline' : ''} ${path === n.href || path.startsWith(n.href + '/') ? 'bg-panel-2 font-medium text-fg' : 'text-muted hover:text-fg'}`}
             >
               {n.label}
             </Link>
           ))}
-          <a
-            href="https://github.com/rohan911438/QoreConnect#readme"
-            className="hidden rounded-xl px-3 py-1.5 text-muted transition hover:text-fg md:inline"
-          >
-            Developers
-          </a>
           <button
             type="button"
             onClick={cycle}
