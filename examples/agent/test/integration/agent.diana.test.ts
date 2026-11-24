@@ -98,17 +98,7 @@ describe.skipIf(!MNEMONIC)('agent mode on Diana', () => {
     expect(r1.steps[0]!.outcome.status).toBe('executed')
     const okTx = (r1.steps[0]!.outcome as any).txHash
 
-    // G3: second tip of 0.2 is within the signed per-tx cap but over the 0.3 daily cap: the CHAIN refuses.
-    const over = await mkAgent(new RulePlanner()).run(
-      signInstruction(root, { ...created.signed.instruction, task: `Tip 0.2 QOR to ${CREATOR} with note "second tip"`, nonce: '1-over' }),
-    )
-    expect(over.ok).toBe(true)
-    if (!over.ok) return
-    const overOutcome = over.steps[0]!.outcome
-    expect(overOutcome).toMatchObject({ status: 'refused-by-chain', code: 'LIMIT_EXCEEDED', chainCode: 5 })
-
-    // G4b: a compromised planner obeys the page; with the guard switched off AND the attacker's own relayer
-    // (no pre-check), the chain still refuses the drain.
+    // An attacker's own relayer: no pre-check, broadcasts anything, so only the chain can refuse.
     const attackerSubmit = async (req: RelayRequest): Promise<RelayResponse> => {
       const msg = fromRelayRequest(req, chain.relayerAddress)
       const res = await chain.submit(msg, Number(req.gasLimit))
@@ -116,6 +106,28 @@ describe.skipIf(!MNEMONIC)('agent mode on Diana', () => {
       const code = x?.success ? undefined : classifyChainRefusal(x?.reason, undefined)
       return { ok: true, success: !!x?.success, txHash: res.transactionHash, code, chainCode: code ? CHAIN_CODES[code] : undefined, error: x?.reason }
     }
+    const overTask = { ...created.signed.instruction, task: `Tip 0.2 QOR to ${CREATOR} with note "second tip"` }
+
+    // G3: second tip of 0.2 is within the signed per-tx cap but over the 0.3 daily cap. The QoreConnect relayer
+    // simulates every call on chain before paying gas, so it reports the chain's refusal (code 5) without broadcasting.
+    const over = await mkAgent(new RulePlanner()).run(signInstruction(root, { ...overTask, nonce: '1-over' }))
+    expect(over.ok).toBe(true)
+    if (!over.ok) return
+    const overOutcome = over.steps[0]!.outcome
+    expect(['refused-by-relayer', 'refused-by-chain']).toContain(overOutcome.status)
+    expect(overOutcome).toMatchObject({ code: 'LIMIT_EXCEEDED', chainCode: 5 })
+
+    // G3b: the same over-cap tip through the attacker's relayer is broadcast, and the CHAIN itself refuses it.
+    const overChain = await mkAgent(new RulePlanner(), { submit: attackerSubmit }).run(
+      signInstruction(root, { ...overTask, nonce: '1-over-chain' }),
+    )
+    expect(overChain.ok).toBe(true)
+    if (!overChain.ok) return
+    const overChainOutcome = overChain.steps[0]!.outcome
+    expect(overChainOutcome).toMatchObject({ status: 'refused-by-chain', code: 'LIMIT_EXCEEDED', chainCode: 5 })
+
+    // G4b: a compromised planner obeys the page; with the guard switched off AND the attacker's own relayer
+    // (no pre-check), the chain still refuses the drain.
     const inj = await mkAgent(new CompromisedPlanner(), { unsafeSkipGuard: true, submit: attackerSubmit }).run(created.signed, [page])
     expect(inj.ok).toBe(true)
     if (!inj.ok) return
@@ -138,7 +150,8 @@ describe.skipIf(!MNEMONIC)('agent mode on Diana', () => {
           createMs,
           txs: { fund: created.fundTx, register: created.registerTx, link: created.linkTx, revoke: rev.tx?.transactionHash, reclaim: reclaimed?.transactionHash },
           G2_success: okTx,
-          G3_chainRefusal: overOutcome,
+          G3_relayerPrecheck: overOutcome,
+          G3b_chainRefusal: overChainOutcome,
           G4_injection: injOutcome,
           G5_afterRevoke: after.ok ? after.steps[0]!.outcome : after,
         },

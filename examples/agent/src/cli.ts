@@ -16,6 +16,7 @@ import type { Hex } from 'viem'
 import { DIANA, type SignedInstruction } from '@rohankumar4179/core'
 import { Agent } from './agent'
 import { ClaudePlanner, RulePlanner, type UntrustedDoc } from './planner'
+import { PUBLIC_RELAYER, allowedOrigins, corsHeaders } from './http'
 
 const ENV = resolve(import.meta.dirname, '../.env')
 dotenv({ path: ENV, quiet: true } as any)
@@ -45,7 +46,8 @@ function makeAgent() {
   return new Agent({
     net: DIANA,
     privateKey: privateKey(),
-    relayerUrl: process.env.RELAYER_URL ?? 'http://localhost:8787',
+    // The public relayer by default, so the agent works with the hosted dashboard; set RELAYER_URL for a local one.
+    relayerUrl: process.env.RELAYER_URL ?? PUBLIC_RELAYER,
     tankId: process.env.GAS_TANK_ID ?? 'demo-dapp',
     planner,
     runsPerHour: Number(process.env.AGENT_RUNS_PER_HOUR ?? 10),
@@ -72,14 +74,18 @@ if (cmd === 'address') {
   process.exit(res.ok ? 0 : 1)
 } else if (cmd === 'serve' || !cmd) {
   const port = Number(process.env.AGENT_PORT ?? 8790)
-  const origin = process.env.AGENT_CORS_ORIGIN ?? 'http://localhost:3000'
+  const origins = allowedOrigins(process.env.AGENT_CORS_ORIGIN)
   createServer(async (req, res) => {
+    const cors = corsHeaders(req.headers.origin, origins, req.headers)
     const send = (status: number, body: unknown) => {
-      res.writeHead(status, { 'content-type': 'application/json', 'access-control-allow-origin': origin, 'access-control-allow-headers': 'content-type' })
+      res.writeHead(status, { 'content-type': 'application/json', ...cors })
       res.end(JSON.stringify(body, (_k, v) => (typeof v === 'bigint' ? v.toString() : v)))
     }
     try {
-      if (req.method === 'OPTIONS') return send(204, {})
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204, cors)
+        return res.end()
+      }
       if (req.method === 'GET' && req.url === '/address') return send(200, { address: agent.address })
       let raw = ''
       for await (const c of req) {
@@ -107,7 +113,11 @@ if (cmd === 'address') {
     } catch (e) {
       send(500, { error: (e as Error).message })
     }
-  }).listen(port, () => console.log(`[agent] ${agent.address} listening on http://localhost:${port}`))
+  }).listen(port, () => {
+    console.log(`[agent] ${agent.address} listening on http://localhost:${port}`)
+    console.log(`[agent] dashboards allowed: ${origins.join(', ')}`)
+    console.log(`[agent] relayer: ${process.env.RELAYER_URL ?? PUBLIC_RELAYER} (gas tank ${process.env.GAS_TANK_ID ?? 'demo-dapp'})`)
+  })
 } else {
   console.error('usage: address | proof <qor1> | run <instruction.json> [docs...] | serve')
   process.exit(2)

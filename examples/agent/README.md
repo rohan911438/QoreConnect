@@ -51,9 +51,14 @@ instruction with your passkey-protected root, and can send it to the agent. **Re
 
 From the command line instead: `pnpm agent run instruction.json fixtures/creator-page.html`.
 
-Environment (`examples/agent/.env`): `AGENT_PRIVATE_KEY`, `RELAYER_URL` (default `http://localhost:8787`),
-`GAS_TANK_ID` (default `demo-dapp`), `ANTHROPIC_API_KEY` (optional), `AGENT_MODEL`, `AGENT_PORT`,
-`AGENT_CORS_ORIGIN`, `AGENT_RUNS_PER_HOUR`.
+Environment (`examples/agent/.env`): `AGENT_PRIVATE_KEY`, `RELAYER_URL` (default: the public relayer
+`https://qoreconnect-relayer.onrender.com`; set `http://localhost:8787` for a local one), `GAS_TANK_ID` (default
+`demo-dapp`), `ANTHROPIC_API_KEY` (optional), `AGENT_MODEL`, `AGENT_PORT`, `AGENT_CORS_ORIGIN` (comma-separated
+dashboards allowed to call the agent; default the hosted site `https://qoreconnect-web.vercel.app` and
+`http://localhost:3000`), `AGENT_RUNS_PER_HOUR`.
+
+The hosted dashboard can talk to the agent on your machine: the agent answers Chrome's private-network check. If
+Chrome asks whether the site may access devices on your local network, allow it.
 
 ## Tests
 
