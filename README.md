@@ -1,5 +1,7 @@
 # QoreConnect
 
+[![Built on QoreChain](https://build.qorechain.io/badge/qoreconnect.svg)](https://build.qorechain.io/p/qoreconnect)
+
 ![QoreConnect: quantum-safe root, MetaMask convenience](docs/assets/cover.png)
 
 > **Quantum-safe root. MetaMask convenience.**
@@ -9,7 +11,7 @@
 **Live on QoreChain Diana testnet** (EVM chain 9800). Abstract accounts are testnet-only, so QoreConnect does not run on mainnet.
 Built for *Build Before Q-Day: The QoreChain Developer Fest*. Not audited; use small amounts.
 
-Demo video: *coming with the submission* ([script](docs/video-script.md)) · Live app: <https://qoreconnect-web.vercel.app> · Demo dApp: <https://qoreconnect-demo.vercel.app> · Relayer: <https://qoreconnect-relayer.onrender.com/health> (free plan: the first request after it has been idle can take about a minute) · [Benchmark](docs/benchmark.md)
+Demo video: <https://youtu.be/Uf4OgEPN-0w> · Submission: <https://build.qorechain.io/p/qoreconnect> · Live app: <https://qoreconnect-web.vercel.app> · Demo dApp: <https://qoreconnect-demo.vercel.app> · Relayer: <https://qoreconnect-relayer.onrender.com/health> (free plan: the first request after it has been idle can take about a minute) · [Benchmark](docs/benchmark.md)
 
 ---
 
@@ -189,7 +191,7 @@ The threat model, every mitigation with its code and test, and the invariants ar
 | Migration Meter and Doctor | Shipped |
 | Hosted deployment (web and demo on Vercel, relayer on Render) | Shipped |
 | npm packages (`@rohankumar4179/core`, `react`, `wagmi`, `relayer` 0.1.0) | Shipped |
-| Demo video | In progress |
+| Demo video ([YouTube](https://youtu.be/Uf4OgEPN-0w)) | Shipped |
 
 ## Hackathon
 
