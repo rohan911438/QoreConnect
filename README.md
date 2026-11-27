@@ -34,27 +34,27 @@ ML-DSA-87 key stays in control, and the classical MetaMask key is capped, scoped
 ## Contents
 
 1. [At a glance](#at-a-glance)
-2. [Why QoreConnect matters](#why-qoreconnect-matters)
-3. [Demo video](#demo-video)
-4. [The problem](#the-problem)
-5. [The solution](#the-solution)
-6. [Features](#features)
-7. [Architecture](#architecture)
-8. [How it works: the flows](#how-it-works-the-flows)
-9. [Security model](#security-model)
-10. [Measured results](#measured-results)
-11. [Engineering and optimizations](#engineering-and-optimizations)
-12. [How it compares](#how-it-compares)
-13. [Quick start](#quick-start)
-14. [Integrate a dApp](#integrate-a-dapp)
-15. [npm packages](#npm-packages)
-16. [Relayer API](#relayer-api)
-17. [Repository layout](#repository-layout)
-18. [Testing and quality](#testing-and-quality)
-19. [Testnet evidence and contracts](#testnet-evidence-and-contracts)
-20. [Honest limitations](#honest-limitations)
-21. [Status and roadmap](#status-and-roadmap)
-22. [Tracks and awards](#tracks-and-awards)
+2. [Tracks and awards](#tracks-and-awards)
+3. [Why QoreConnect matters](#why-qoreconnect-matters)
+4. [Demo video](#demo-video)
+5. [The problem](#the-problem)
+6. [The solution](#the-solution)
+7. [Features](#features)
+8. [Architecture](#architecture)
+9. [How it works: the flows](#how-it-works-the-flows)
+10. [Security model](#security-model)
+11. [Measured results](#measured-results)
+12. [Engineering and optimizations](#engineering-and-optimizations)
+13. [How it compares](#how-it-compares)
+14. [Quick start](#quick-start)
+15. [Integrate a dApp](#integrate-a-dapp)
+16. [npm packages](#npm-packages)
+17. [Relayer API](#relayer-api)
+18. [Repository layout](#repository-layout)
+19. [Testing and quality](#testing-and-quality)
+20. [Testnet evidence and contracts](#testnet-evidence-and-contracts)
+21. [Honest limitations](#honest-limitations)
+22. [Status and roadmap](#status-and-roadmap)
 23. [All links](#all-links)
 24. [Credits and licence](#credits-and-licence)
 
@@ -70,6 +70,122 @@ ML-DSA-87 key stays in control, and the classical MetaMask key is capped, scoped
 | **For QoreChain** | Moves EVM traffic onto post-quantum roots, which is the condition on QoreChain's roadmap for making the hybrid EVM lane **Required** in Q3 2027. |
 | **Tracks** | 🏆 Post-Quantum AI Agents (main) · 🤖 Best AI-Native Build · 🗳️ People's Choice · 🎓 Quantum Campus · 🌍 Regional · ⭐ Top-Quality: [details](#tracks-and-awards) |
 | **Proof** | Every claim links to a Diana transaction or a script you can rerun: [`docs/testnet-evidence.md`](docs/testnet-evidence.md). |
+
+---
+
+## Tracks and awards
+
+QoreConnect is entered in **one main category**, as the rules allow, and in **five special awards**. The submission page is
+<https://build.qorechain.io/p/qoreconnect>.
+
+| # | Track / award | Type | Prize | Why QoreConnect qualifies | Evidence |
+|---|---|---|---|---|---|
+| 1 | 🏆 **Post-Quantum AI Agents** | Main category | $1,500 / $750 | Agents *are* abstract accounts with linked, limited keys, which is exactly what QoreConnect builds, for humans and AI alike | [Requirement mapping ↓](#1-main-category-post-quantum-ai-agents) |
+| 2 | 🤖 **Best AI-Native Build** | Special award | $500 | Built AI-native with 16 gated prompts; AI also runs *inside* the product behind hard safety rails | [`AI_USAGE.md`](AI_USAGE.md) |
+| 3 | 🗳️ **People's Choice** | Community vote | $500 / $300 / $200 | Useful to every MetaMask user and every QoreChain dApp team, with a public, shareable Migration Meter | [Live app](https://qoreconnect-web.vercel.app) |
+| 4 | 🎓 **Quantum Campus** | Special award | $500 | Built by a team of enrolled students | Verified by student email on build.qorechain.io |
+| 5 | 🌍 **Regional Awards** | Special award | 5 × $200 | Region chosen on the project form | Project form |
+| 6 | ⭐ **Top-Quality Awards** | Special award | 7 × $250 | Jury score of at least 70/100: tested, documented, deployed and backed by testnet evidence | [Testing](#testing-and-quality) · [Evidence](#testnet-evidence-and-contracts) |
+
+> Regional and Top-Quality Awards go only to projects that win no other prize, so they act as a safety net under the
+> category and special-award targets.
+
+```mermaid
+flowchart LR
+  QC(["QoreConnect"]) --> MAIN["🏆 Post-Quantum AI Agents<br/>main category"]
+  QC --> AIN["🤖 Best AI-Native Build"]
+  QC --> PC["🗳️ People's Choice"]
+  QC --> CAM["🎓 Quantum Campus"]
+  QC -.->|"if no other prize"| REG["🌍 Regional"]
+  QC -.->|"if no other prize"| TQ["⭐ Top-Quality"]
+```
+
+### 1. Main category: Post-Quantum AI Agents
+
+**Why this category:** in QoreChain's own terminology, an agent is an abstract account with linked, limited keys. In
+QoreConnect, a MetaMask session key and an AI agent key are the **same mechanism**: a key the post-quantum root links with
+caps, a contract allow-list and an expiry. One permission layer serves both humans and AI agents.
+
+| # | Category requirement | How QoreConnect meets it | Proven on Diana |
+|---|---|---|---|
+| R1 | **Scoped EVM window** | The root opens EVM windows with tight bounds (blocks, transactions, total uqor); the demo contracts were deployed inside one | [`0x24f70a3e…d556`](https://explore.qore.network/tx/0x24f70a3e3bafce83258cdc8591881f1d10864fcd05b547cddeb125d7d272d556) |
+| R2 | **Transaction limits** | `perTxLimit` on every session and agent key (defaults: 1 QOR for MetaMask, 0.5 QOR for agents) | Per-tx refusals in the relay integration tests |
+| R3 | **Value limits** | `dailyLimit` for every denom; token approvals count against it too | Daily cap refused, code 5: [`4308ADCC…CEB8`](https://explore.qore.network/tx/4308ADCC09358FB59E53F9899938317D68E91ED1ADF5341F296732515638CEB8) |
+| R4 | **Duration limits** | Expiry on every key (7 days MetaMask, 24 h agents), a countdown, and one-tap renewal | Doctor run with a 75-second link, before and after expiry (P12) |
+| R5 | **Target limits** | `allowed_evm_calls`, as `0xTARGET` or `0xTARGET/0xSELECTOR`, set to the approved dApp's contracts | Drainer refused, code 10: [`125E638C…EFF6`](https://explore.qore.network/tx/125E638C8670B49394EDF8F10BCE9DAC7C993A508D57833F9EAFC8B179B5EFF6) |
+| R6 | **Smart-account spending rules** | Link + rules + allow-list in one root-signed tx; read-merge-write keeps every other rule | Link: [`08EAAB70…3C07`](https://explore.qore.network/tx/08EAAB70FF9AD7B5AE9875A8F58522A1A98EFF97CDF66794FED1474932ED3C07) |
+| R7 | **Authenticated messaging** | (a) Every session-key action is an EIP-191 authorisation with a per-key nonce; (b) owner → agent instructions are signed with ML-DSA-87 by the root and verified against the key registered on chain | Agent action: [`B10FCF49…75D5`](https://explore.qore.network/tx/B10FCF490C23D5578EFE81CFDEB1519A88BFA68B7650345E81B53405C36275D5) |
+| R8 | **AI agent** | An AI agent (Claude planner via the Anthropic SDK, deterministic fallback) on its own capped sub-account | Prompt injection refused, code 10: [`AABFD632…DB6C`](https://explore.qore.network/tx/AABFD6321D45E1652B320FFB2222163C2824E711BCADE484C168F8171D36DB6C) |
+
+**What sets it apart in this category:**
+
+| | Typical agent entry | QoreConnect |
+|---|---|---|
+| Who it serves | One agent, one owner | Every MetaMask user, every dApp, *and* agents |
+| Reusability | A demo script | Four npm packages, a 9-line integration, a self-hostable relayer |
+| Onboarding | Assumes QoreX and test QOR | Sponsored onboarding from MetaMask only, 0 QOR |
+| Prompt-injection defence | Prompt rules | ML-DSA-87-signed instructions + local guard + **chain-enforced** caps |
+| Ecosystem impact | Ends with the demo | Moves EVM traffic onto post-quantum roots, measured by the public Migration Meter |
+
+**Kits and network features used:**
+
+| Kits | Network features |
+|---|---|
+| [`@qorechain/sdk`](https://www.npmjs.com/package/@qorechain/sdk) 0.14.0 (TypeScript) · [`@qorechain/pqc`](https://www.npmjs.com/package/@qorechain/pqc) 0.2.3 (TypeScript) | Hybrid ML-DSA-87 transactions · PQC key registration with proof of possession · scoped EVM window · Solidity PQC signature check (`pqcVerify`) · Solidity PQC key status (`pqcKeyStatus`) · smart accounts and spending rules |
+
+The full mapping, risks and fallback are in [`tracks/02-main-track-pq-ai-agents.md`](tracks/02-main-track-pq-ai-agents.md).
+
+### 2. Best AI-Native Build
+
+| Requirement | QoreConnect |
+|---|---|
+| `AI_USAGE.md` in the repo | ✅ [`AI_USAGE.md`](AI_USAGE.md): tools, workflow, a per-component table, mistakes AI made and how they were caught |
+| AI-native tick on the form | ✅ |
+
+- **Built AI-native.** 16 written prompts ([`prompts/`](prompts/)), each with deliverables, a validation gate and a failure
+  branch. A gate had to pass on the live Diana testnet before the next prompt started, and every result and deviation is logged
+  in [`prompts/STATUS.md`](prompts/STATUS.md). Checks that need a human are marked *manual pending* rather than claimed.
+- **AI inside the product.** Agent mode puts an AI agent on-chain safely: owner-signed ML-DSA-87 instructions, a local
+  target/selector guard, strict tool schemas and cost caps, and chain-enforced spending limits underneath.
+
+### 3. People's Choice
+
+A QoreX community vote on mainnet, **6–15 Dec 2026** (3 votes per wallet holding at least 10 QOR, one per project).
+
+- **Useful to every voter:** anyone with MetaMask can try it in 60 seconds on the [demo dApp](https://qoreconnect-demo.vercel.app).
+- **Useful to every builder:** each team building an EVM dApp on QoreChain can integrate it in 9 lines.
+- **Shareable:** the public [Migration Meter](https://qoreconnect-web.vercel.app/meter) and per-address
+  [Q-Day exposure reports](https://qoreconnect-web.vercel.app/exposure) are made to be shared.
+
+**Vote for QoreConnect:** <https://build.qorechain.io/p/qoreconnect> · #BuildBeforeQDay
+
+### 4. Quantum Campus
+
+Every team member is a currently enrolled student, verified by student email on build.qorechain.io. **QoreConnect is built by students.**
+
+### 5. Regional Awards and 6. Top-Quality Awards
+
+These fallback awards go only to projects that win no other prize. Top-Quality needs a jury score of at least **70/100**,
+which is what the rest of this README is built to earn:
+
+| Jury lens | Where to look |
+|---|---|
+| Does it work? | [Live app](https://qoreconnect-web.vercel.app), [demo dApp](https://qoreconnect-demo.vercel.app), [video](https://youtu.be/Uf4OgEPN-0w) |
+| Is it real? | 9 required transaction types with Diana hashes: [`docs/testnet-evidence.md`](docs/testnet-evidence.md) |
+| Is it safe? | 19 threats mapped to code and tests, 5 invariants verified live: [`docs/security.md`](docs/security.md) |
+| Is it well built? | 130+ unit tests, 35 Foundry tests, production E2E, CI with secret scanning: [Testing](#testing-and-quality) |
+| Is it honest? | [Honest limitations](#honest-limitations), with classical signatures labelled classical |
+| Is it reusable? | [npm packages](#npm-packages) and a [self-hostable relayer](#self-host-the-relayer-docker) |
+
+### Event details
+
+| | |
+|---|---|
+| Event | [Build Before Q-Day: The QoreChain Developer Fest](https://build.qorechain.io) |
+| Network | QoreChain Diana testnet (`qorechain-diana`, EVM chain 9800) |
+| Submission deadline | 2 Dec 2026, 23:59 UTC |
+| Judging and People's Choice | 6–15 Dec 2026 |
+| Planning documents | [`tracks/`](tracks/), [`docs/planning.md`](docs/planning.md), [`idea/`](idea/), [`prompts/`](prompts/) |
 
 ---
 
@@ -846,122 +962,6 @@ Explorer: <https://explore.qore.network>. All hashes and reproduction scripts ar
 
 **Next:** a security audit; more wallets (any EIP-1193 wallet as the session key); a "Move to QoreX" path for users ready to go
 fully post-quantum; dApp-side gas-tank dashboards; and mainnet as soon as QoreChain enables abstract accounts there.
-
----
-
-## Tracks and awards
-
-QoreConnect is entered in **one main category**, as the rules allow, and in **five special awards**. The submission page is
-<https://build.qorechain.io/p/qoreconnect>.
-
-| # | Track / award | Type | Prize | Why QoreConnect qualifies | Evidence |
-|---|---|---|---|---|---|
-| 1 | 🏆 **Post-Quantum AI Agents** | Main category | $1,500 / $750 | Agents *are* abstract accounts with linked, limited keys, which is exactly what QoreConnect builds, for humans and AI alike | [Requirement mapping ↓](#1-main-category-post-quantum-ai-agents) |
-| 2 | 🤖 **Best AI-Native Build** | Special award | $500 | Built AI-native with 16 gated prompts; AI also runs *inside* the product behind hard safety rails | [`AI_USAGE.md`](AI_USAGE.md) |
-| 3 | 🗳️ **People's Choice** | Community vote | $500 / $300 / $200 | Useful to every MetaMask user and every QoreChain dApp team, with a public, shareable Migration Meter | [Live app](https://qoreconnect-web.vercel.app) |
-| 4 | 🎓 **Quantum Campus** | Special award | $500 | Built by a team of enrolled students | Verified by student email on build.qorechain.io |
-| 5 | 🌍 **Regional Awards** | Special award | 5 × $200 | Region chosen on the project form | Project form |
-| 6 | ⭐ **Top-Quality Awards** | Special award | 7 × $250 | Jury score of at least 70/100: tested, documented, deployed and backed by testnet evidence | [Testing](#testing-and-quality) · [Evidence](#testnet-evidence-and-contracts) |
-
-> Regional and Top-Quality Awards go only to projects that win no other prize, so they act as a safety net under the
-> category and special-award targets.
-
-```mermaid
-flowchart LR
-  QC(["QoreConnect"]) --> MAIN["🏆 Post-Quantum AI Agents<br/>main category"]
-  QC --> AIN["🤖 Best AI-Native Build"]
-  QC --> PC["🗳️ People's Choice"]
-  QC --> CAM["🎓 Quantum Campus"]
-  QC -.->|"if no other prize"| REG["🌍 Regional"]
-  QC -.->|"if no other prize"| TQ["⭐ Top-Quality"]
-```
-
-### 1. Main category: Post-Quantum AI Agents
-
-**Why this category:** in QoreChain's own terminology, an agent is an abstract account with linked, limited keys. In
-QoreConnect, a MetaMask session key and an AI agent key are the **same mechanism**: a key the post-quantum root links with
-caps, a contract allow-list and an expiry. One permission layer serves both humans and AI agents.
-
-| # | Category requirement | How QoreConnect meets it | Proven on Diana |
-|---|---|---|---|
-| R1 | **Scoped EVM window** | The root opens EVM windows with tight bounds (blocks, transactions, total uqor); the demo contracts were deployed inside one | [`0x24f70a3e…d556`](https://explore.qore.network/tx/0x24f70a3e3bafce83258cdc8591881f1d10864fcd05b547cddeb125d7d272d556) |
-| R2 | **Transaction limits** | `perTxLimit` on every session and agent key (defaults: 1 QOR for MetaMask, 0.5 QOR for agents) | Per-tx refusals in the relay integration tests |
-| R3 | **Value limits** | `dailyLimit` for every denom; token approvals count against it too | Daily cap refused, code 5: [`4308ADCC…CEB8`](https://explore.qore.network/tx/4308ADCC09358FB59E53F9899938317D68E91ED1ADF5341F296732515638CEB8) |
-| R4 | **Duration limits** | Expiry on every key (7 days MetaMask, 24 h agents), a countdown, and one-tap renewal | Doctor run with a 75-second link, before and after expiry (P12) |
-| R5 | **Target limits** | `allowed_evm_calls`, as `0xTARGET` or `0xTARGET/0xSELECTOR`, set to the approved dApp's contracts | Drainer refused, code 10: [`125E638C…EFF6`](https://explore.qore.network/tx/125E638C8670B49394EDF8F10BCE9DAC7C993A508D57833F9EAFC8B179B5EFF6) |
-| R6 | **Smart-account spending rules** | Link + rules + allow-list in one root-signed tx; read-merge-write keeps every other rule | Link: [`08EAAB70…3C07`](https://explore.qore.network/tx/08EAAB70FF9AD7B5AE9875A8F58522A1A98EFF97CDF66794FED1474932ED3C07) |
-| R7 | **Authenticated messaging** | (a) Every session-key action is an EIP-191 authorisation with a per-key nonce; (b) owner → agent instructions are signed with ML-DSA-87 by the root and verified against the key registered on chain | Agent action: [`B10FCF49…75D5`](https://explore.qore.network/tx/B10FCF490C23D5578EFE81CFDEB1519A88BFA68B7650345E81B53405C36275D5) |
-| R8 | **AI agent** | An AI agent (Claude planner via the Anthropic SDK, deterministic fallback) on its own capped sub-account | Prompt injection refused, code 10: [`AABFD632…DB6C`](https://explore.qore.network/tx/AABFD6321D45E1652B320FFB2222163C2824E711BCADE484C168F8171D36DB6C) |
-
-**What sets it apart in this category:**
-
-| | Typical agent entry | QoreConnect |
-|---|---|---|
-| Who it serves | One agent, one owner | Every MetaMask user, every dApp, *and* agents |
-| Reusability | A demo script | Four npm packages, a 9-line integration, a self-hostable relayer |
-| Onboarding | Assumes QoreX and test QOR | Sponsored onboarding from MetaMask only, 0 QOR |
-| Prompt-injection defence | Prompt rules | ML-DSA-87-signed instructions + local guard + **chain-enforced** caps |
-| Ecosystem impact | Ends with the demo | Moves EVM traffic onto post-quantum roots, measured by the public Migration Meter |
-
-**Kits and network features used:**
-
-| Kits | Network features |
-|---|---|
-| [`@qorechain/sdk`](https://www.npmjs.com/package/@qorechain/sdk) 0.14.0 (TypeScript) · [`@qorechain/pqc`](https://www.npmjs.com/package/@qorechain/pqc) 0.2.3 (TypeScript) | Hybrid ML-DSA-87 transactions · PQC key registration with proof of possession · scoped EVM window · Solidity PQC signature check (`pqcVerify`) · Solidity PQC key status (`pqcKeyStatus`) · smart accounts and spending rules |
-
-The full mapping, risks and fallback are in [`tracks/02-main-track-pq-ai-agents.md`](tracks/02-main-track-pq-ai-agents.md).
-
-### 2. Best AI-Native Build
-
-| Requirement | QoreConnect |
-|---|---|
-| `AI_USAGE.md` in the repo | ✅ [`AI_USAGE.md`](AI_USAGE.md): tools, workflow, a per-component table, mistakes AI made and how they were caught |
-| AI-native tick on the form | ✅ |
-
-- **Built AI-native.** 16 written prompts ([`prompts/`](prompts/)), each with deliverables, a validation gate and a failure
-  branch. A gate had to pass on the live Diana testnet before the next prompt started, and every result and deviation is logged
-  in [`prompts/STATUS.md`](prompts/STATUS.md). Checks that need a human are marked *manual pending* rather than claimed.
-- **AI inside the product.** Agent mode puts an AI agent on-chain safely: owner-signed ML-DSA-87 instructions, a local
-  target/selector guard, strict tool schemas and cost caps, and chain-enforced spending limits underneath.
-
-### 3. People's Choice
-
-A QoreX community vote on mainnet, **6–15 Dec 2026** (3 votes per wallet holding at least 10 QOR, one per project).
-
-- **Useful to every voter:** anyone with MetaMask can try it in 60 seconds on the [demo dApp](https://qoreconnect-demo.vercel.app).
-- **Useful to every builder:** each team building an EVM dApp on QoreChain can integrate it in 9 lines.
-- **Shareable:** the public [Migration Meter](https://qoreconnect-web.vercel.app/meter) and per-address
-  [Q-Day exposure reports](https://qoreconnect-web.vercel.app/exposure) are made to be shared.
-
-**Vote for QoreConnect:** <https://build.qorechain.io/p/qoreconnect> · #BuildBeforeQDay
-
-### 4. Quantum Campus
-
-Every team member is a currently enrolled student, verified by student email on build.qorechain.io. **QoreConnect is built by students.**
-
-### 5. Regional Awards and 6. Top-Quality Awards
-
-These fallback awards go only to projects that win no other prize. Top-Quality needs a jury score of at least **70/100**,
-which is what the rest of this README is built to earn:
-
-| Jury lens | Where to look |
-|---|---|
-| Does it work? | [Live app](https://qoreconnect-web.vercel.app), [demo dApp](https://qoreconnect-demo.vercel.app), [video](https://youtu.be/Uf4OgEPN-0w) |
-| Is it real? | 9 required transaction types with Diana hashes: [`docs/testnet-evidence.md`](docs/testnet-evidence.md) |
-| Is it safe? | 19 threats mapped to code and tests, 5 invariants verified live: [`docs/security.md`](docs/security.md) |
-| Is it well built? | 130+ unit tests, 35 Foundry tests, production E2E, CI with secret scanning: [Testing](#testing-and-quality) |
-| Is it honest? | [Honest limitations](#honest-limitations), with classical signatures labelled classical |
-| Is it reusable? | [npm packages](#npm-packages) and a [self-hostable relayer](#self-host-the-relayer-docker) |
-
-### Event details
-
-| | |
-|---|---|
-| Event | [Build Before Q-Day: The QoreChain Developer Fest](https://build.qorechain.io) |
-| Network | QoreChain Diana testnet (`qorechain-diana`, EVM chain 9800) |
-| Submission deadline | 2 Dec 2026, 23:59 UTC |
-| Judging and People's Choice | 6–15 Dec 2026 |
-| Planning documents | [`tracks/`](tracks/), [`docs/planning.md`](docs/planning.md), [`idea/`](idea/), [`prompts/`](prompts/) |
 
 ---
 
