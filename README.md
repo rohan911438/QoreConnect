@@ -34,27 +34,29 @@ ML-DSA-87 key stays in control, and the classical MetaMask key is capped, scoped
 ## Contents
 
 1. [At a glance](#at-a-glance)
-2. [Demo video](#demo-video)
-3. [The problem](#the-problem)
-4. [The solution](#the-solution)
-5. [Features](#features)
-6. [Architecture](#architecture)
-7. [How it works: the flows](#how-it-works-the-flows)
-8. [Security model](#security-model)
-9. [Measured results](#measured-results)
-10. [How it compares](#how-it-compares)
-11. [Quick start](#quick-start)
-12. [Integrate a dApp](#integrate-a-dapp)
-13. [npm packages](#npm-packages)
-14. [Relayer API](#relayer-api)
-15. [Repository layout](#repository-layout)
-16. [Testing and quality](#testing-and-quality)
-17. [Testnet evidence and contracts](#testnet-evidence-and-contracts)
-18. [Honest limitations](#honest-limitations)
-19. [Status and roadmap](#status-and-roadmap)
-20. [Hackathon](#hackathon)
-21. [All links](#all-links)
-22. [Credits and licence](#credits-and-licence)
+2. [Why QoreConnect matters](#why-qoreconnect-matters)
+3. [Demo video](#demo-video)
+4. [The problem](#the-problem)
+5. [The solution](#the-solution)
+6. [Features](#features)
+7. [Architecture](#architecture)
+8. [How it works: the flows](#how-it-works-the-flows)
+9. [Security model](#security-model)
+10. [Measured results](#measured-results)
+11. [Engineering and optimizations](#engineering-and-optimizations)
+12. [How it compares](#how-it-compares)
+13. [Quick start](#quick-start)
+14. [Integrate a dApp](#integrate-a-dapp)
+15. [npm packages](#npm-packages)
+16. [Relayer API](#relayer-api)
+17. [Repository layout](#repository-layout)
+18. [Testing and quality](#testing-and-quality)
+19. [Testnet evidence and contracts](#testnet-evidence-and-contracts)
+20. [Honest limitations](#honest-limitations)
+21. [Status and roadmap](#status-and-roadmap)
+22. [Hackathon](#hackathon)
+23. [All links](#all-links)
+24. [Credits and licence](#credits-and-licence)
 
 ---
 
@@ -67,6 +69,32 @@ ML-DSA-87 key stays in control, and the classical MetaMask key is capped, scoped
 | **For agents** | An AI agent gets its own capped sub-account and acts **only** on instructions the root has signed with ML-DSA-87. Prompt injection can't spend your money. |
 | **For QoreChain** | Moves EVM traffic onto post-quantum roots, which is the condition on QoreChain's roadmap for making the hybrid EVM lane **Required** in Q3 2027. |
 | **Proof** | Every claim links to a Diana transaction or a script you can rerun: [`docs/testnet-evidence.md`](docs/testnet-evidence.md). |
+
+---
+
+## Why QoreConnect matters
+
+Most post-quantum projects ask users to **leave** the tools they already use. QoreConnect does the opposite: it meets
+MetaMask users where they are and quietly moves the authority underneath them to a post-quantum key.
+
+| Lens | What QoreConnect delivers |
+|---|---|
+| **Ecosystem impact** | It goes straight at QoreChain's own 2027 condition, that most EVM traffic must sign hybrid before the EVM lane becomes Required. Every QoreConnect user is EVM traffic with a post-quantum root, and the public [Migration Meter](https://qoreconnect-web.vercel.app/meter) measures that progress. |
+| **Real usability** | 1 passkey tap, 1 MetaMask signature, 0 QOR, **19.8 s**. No new wallet, no seed phrase to write down first, no faucet. |
+| **Security you can verify** | Limits are enforced by QoreChain's consensus, not by our UI or a custom contract. A stolen key sent through an attacker's own relayer was still refused, and the transaction is public. |
+| **Reusable infrastructure** | It isn't a demo: four npm packages, a 9-line wagmi integration, and a self-hostable Docker relayer. Every QoreChain dApp can adopt it without rebuilding PQC onboarding. |
+| **Agents done safely** | Humans and AI agents share **one** permission layer. Agents act only on ML-DSA-87-signed owner instructions, inside their own capped sub-account. |
+| **Proof over promises** | 9 required transaction types, each with a Diana hash; 19 threats mapped to code lines and tests; 5 invariants verified live. |
+
+### Design principles
+
+| Principle | How it shows up |
+|---|---|
+| **Never sign blind** | Every call is decoded, simulated and checked against your on-chain limits before MetaMask opens, and the signed digest is bound to that exact preview. |
+| **Honesty built in** | Classical signatures are labelled classical. The README states what isn't quantum-safe, what isn't audited, and that it's testnet-only. |
+| **A number that can be checked is a fact** | Every metric in this README links to a transaction, a test or a script you can rerun. |
+| **No flag-days** | Users keep MetaMask today and move up to a fully post-quantum wallet whenever they're ready. Nothing breaks on the way. |
+| **Least authority by default** | New keys start capped (1 QOR per tx, 5 QOR per day, 7 days) and scoped to the approved dApp's contracts. Agent keys are tighter still. |
 
 ---
 
@@ -542,6 +570,27 @@ Onboarding a new user costs the sponsor **about 0.10 QOR**, and the user pays no
 
 ---
 
+## Engineering and optimizations
+
+QoreConnect was tuned against the real Diana testnet, not a local mock. Each optimization below came from a measured problem
+and is recorded in [`prompts/STATUS.md`](prompts/STATUS.md).
+
+| Area | Problem we measured | Optimization | Result |
+|---|---|---|---|
+| **Onboarding time** | 35.2 s from a fresh browser to a linked account (P09) | Hedged, idempotent requests against slow Diana REST nodes; auto-resume, so a retry continues the same root instead of creating a second one | **19.8 s** on the live site (production E2E, P15) |
+| **Signatures** | Each extra wallet prompt loses users | The link, spending rule and allow-list go in **one** root-signed tx; MetaMask signs a single link proof | **1** MetaMask signature to onboard |
+| **Wasted relayer gas** | On QoreChain a refused execution is still a code-0 tx, and **the relayer pays its fee** (0.0975 QOR measured) | A mandatory pre-check before broadcast (signer, nonce, tank, rule, allow-list, caps, `eth_call` simulation) | Bad calls are refused **for free**, before they reach the chain |
+| **Gas under-provisioning** | The chain refuses (code 10) when the envelope provides less gas than the user signed | `gas = max(simulated × 1.3, signedGasLimit + 450,000)` | The envelope always covers what the user signed |
+| **Revocation cost** | Revoking keys one by one costs one tx each | All classical keys revoked in **one** root tx | Kill switch: 241,770 gas, 0.048 QOR, any number of keys |
+| **Rule safety** | QoreChain replaces rule sets wholesale, so a naive update wipes other rules | Read-merge-write on every update, plus an invariant check after every write | Invariants I1 and I2 hold on Diana |
+| **Gas-tank races** | Concurrent relays could overspend a tank | In-flight fee reservation; nonce freshness checked before broadcast | Tank budget reserved per in-flight call; stale nonces never broadcast (I3) |
+| **Result integrity** | "Code 0" doesn't mean the call succeeded | The SDK re-fetches the tx and checks it contains *this* call and `success=true` | Invariant I4 verified on Diana |
+| **Approval history** | Relayed calls don't appear in `eth_getLogs` on Diana | The scanner rebuilds allowances from the chain's tx search (any relayer, survives restarts) | Live allowances found and revoked on Diana |
+| **Page speed** | The public meter must load fast for sharing | Indexer runs every 15 min inside the relayer; snapshots served from storage | `/meter` loads in **0.58 s** warm, 1.59 s cold |
+| **Code quality** | A self-review found 10 issues (owner pinning, `X-Forwarded-For` trust, fee on timeout…) | Each fixed with a regression test | 130+ unit tests, 35 Foundry tests, production E2E 5/5 |
+
+---
+
 ## How it compares
 
 | | Plain MetaMask | QoreX (official wallet) | Passkey smart wallets | MetaMask + ERC-7715 | **QoreConnect** |
@@ -808,7 +857,7 @@ fully post-quantum; dApp-side gas-tank dashboards; and mainnet as soon as QoreCh
 | Category | **Post-Quantum AI Agents**: requirement mapping in [`tracks/02-main-track-pq-ai-agents.md`](tracks/02-main-track-pq-ai-agents.md) |
 | Kits | QoreChain SDK (TypeScript), qorechain-pqc (TypeScript) |
 | Network features | Hybrid ML-DSA-87 transactions, PQC key registration with proof of possession, scoped EVM window, Solidity PQC signature check and key status, smart accounts and spending rules |
-| AI-Native | Built with Claude Code through 16 gated prompts: [`AI_USAGE.md`](AI_USAGE.md) |
+| AI-Native | Built AI-native through 16 written prompts, each closed by a validation gate on the live Diana testnet: [`AI_USAGE.md`](AI_USAGE.md) |
 | Planning | [`docs/planning.md`](docs/planning.md), [`idea/`](idea/), [`prompts/`](prompts/) |
 
 ---
